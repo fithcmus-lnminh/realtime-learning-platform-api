@@ -23,8 +23,9 @@ const port = process.env.PORT || 5000;
 
 app.use(
   session({
-    secret: "secret",
+    name: "cookie",
     keys: ['secretkey'],
+    secure: process.env.NODE_ENV !== "development",
     maxAge: 24 * 60 * 60 * 1000 
   })
 );
