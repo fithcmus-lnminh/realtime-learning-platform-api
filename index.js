@@ -27,7 +27,8 @@ app.use(
     keys: ['secretkey'],
     secure: process.env.NODE_ENV !== "development",
     maxAge: 24 * 60 * 60 * 1000 ,
-    domain: process.env.CLIENT_URL
+    httpOnly: false,
+    sameSite: "none"
   })
 );
 app.use(passport.initialize());
