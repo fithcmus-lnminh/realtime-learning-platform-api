@@ -9,7 +9,7 @@ const accountRouter = require("./routes/account.route");
 const OAuth2Router = require("./routes/oauth2.route");
 const userRouter = require("./routes/user.route");
 const passport = require("passport");
-const session = require("cookie-session");
+const session = require("express-session");
 
 const app = express();
 
@@ -23,12 +23,12 @@ const port = process.env.PORT || 5000;
 
 app.use(
   session({
-    name: "cookie",
-    keys: ['secretkey'],
-    secure: process.env.NODE_ENV !== "development",
-    maxAge: 24 * 60 * 60 * 1000 ,
-    httpOnly: false,
-    sameSite: "none"
+    secret: "secret",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      sameSite: "none"
+    }
   })
 );
 app.use(passport.initialize());
