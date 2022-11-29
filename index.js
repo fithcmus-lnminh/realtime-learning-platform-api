@@ -26,9 +26,6 @@ app.use(
     secret: "secret",
     resave: false,
     saveUninitialized: true,
-    cookie: {
-      sameSite: "none"
-    }
   })
 );
 app.use(passport.initialize());
