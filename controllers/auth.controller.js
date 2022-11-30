@@ -15,8 +15,16 @@ exports.login = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email })
     const token = generateToken(user._id, process.env.JWT_SECRET);
+
+    if (user && user.source === "google") {
+       return res.json({
+          code: API_CODE_VALIDATION_ERROR,
+          message: "This email is used for google login method",
+          data: null
+        });
+    }
 
     if (user && (await user.comparePassword(password))) {
       if (user.activated) {
