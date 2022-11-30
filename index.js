@@ -27,6 +27,7 @@ app.use(
     resave: false,
     saveUninitialized: true,
     proxy: true,
+    name: "session-google",
   })
 );
 app.use(passport.initialize());
