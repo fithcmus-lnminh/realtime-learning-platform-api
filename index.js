@@ -27,8 +27,6 @@ app.use(
     resave: false,
     saveUninitialized: true,
     proxy: true,
-    name: "session-google",
-    cookie: { secure: process.env.NODE_ENV !== 'development', maxAge: 1000 * 60 * 60 * 48, sameSite:  process.env.NODE_ENV !== 'development' ? 'none' : 'lax' }
   })
 );
 app.use(passport.initialize());
