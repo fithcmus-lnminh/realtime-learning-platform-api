@@ -15,7 +15,7 @@ const presentationSchema = mongoose.Schema(
         },
         slide_id: {
           type: mongoose.Schema.Types.ObjectId,
-          refpath: "slides.slide_type",
+          refPath: "slides.slide_type",
           required: true,
         },
       },

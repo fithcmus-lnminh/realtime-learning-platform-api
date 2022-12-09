@@ -10,7 +10,9 @@ exports.getPresentation = async (req, res) => {
     const presentation = await Presentation.findOne({
       _id: presentation_id,
       user_id: user._id,
-    });
+    }).populate("slides.slide_id");
+
+    console.log(presentation);
 
     res.json({
       code: API_CODE_SUCCESS,
