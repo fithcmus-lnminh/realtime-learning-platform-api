@@ -58,23 +58,13 @@ exports.getMultipleChoices = async (req, res) => {
 };
 
 exports.getMultipleChoice = async (req, res) => {
-  const { multiple_choice_id } = req.params;
+  const { multipleChoice } = req;
 
-  try {
-    const multipleChoice = await MultipleChoice.findById(multiple_choice_id);
-
-    res.json({
-      code: API_CODE_SUCCESS,
-      message: "Success",
-      data: multipleChoice,
-    });
-  } catch (err) {
-    res.json({
-      code: API_CODE_BY_SERVER,
-      message: err.message,
-      data: null,
-    });
-  }
+  res.json({
+    code: API_CODE_SUCCESS,
+    message: "Success",
+    data: multipleChoice,
+  });
 };
 
 exports.updateMultipleChoice = async (req, res) => {
@@ -105,7 +95,7 @@ exports.deleteMultipleChoice = async (req, res) => {
     await multipleChoice.remove();
 
     presentation.slides = presentation.slides.filter(
-      (slide) => slide.slide_id != multipleChoice._id
+      (slide) => slide.slide_id.toString() !== multipleChoice._id.toString()
     );
 
     await presentation.save();

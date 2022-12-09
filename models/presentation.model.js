@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const MultipleChoice = require("./multipleChoice.model.js");
 
 const presentationSchema = mongoose.Schema(
   {
@@ -37,5 +38,19 @@ const presentationSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+presentationSchema.pre("remove", async function (next) {
+  const presentation = this;
+
+  await MultipleChoice.deleteMany({
+    _id: {
+      $in: presentation.slides
+        .filter((slide) => slide.slide_type === "MultipleChoice")
+        .map((slide) => slide.slide_id),
+    },
+  });
+
+  next();
+});
 
 module.exports = mongoose.model("Presentation", presentationSchema);
