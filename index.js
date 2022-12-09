@@ -8,6 +8,7 @@ const groupRouter = require("./routes/group.route");
 const accountRouter = require("./routes/account.route");
 const OAuth2Router = require("./routes/oauth2.route");
 const userRouter = require("./routes/user.route");
+const presentationRouter = require("./routes/presentation.route");
 const passport = require("passport");
 const session = require("express-session");
 
@@ -45,6 +46,7 @@ app.use("/api/group", groupRouter);
 app.use("/api/account", accountRouter);
 app.use("/auth/google", OAuth2Router);
 app.use("/api/user", userRouter);
+app.use("/api/presentation", presentationRouter);
 
 app.use(errorHandler);
 
