@@ -5,7 +5,6 @@ const multipleChoiceSchema = mongoose.Schema(
   {
     question: {
       type: String,
-      required: true,
     },
     options: [
       {

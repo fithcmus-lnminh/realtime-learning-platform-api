@@ -28,6 +28,7 @@ const presentationSchema = mongoose.Schema(
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
     group_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -35,6 +36,8 @@ const presentationSchema = mongoose.Schema(
     },
   },
   {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
     timestamps: true,
   }
 );
@@ -51,6 +54,13 @@ presentationSchema.pre("remove", async function (next) {
   });
 
   next();
+});
+
+presentationSchema.virtual("user", {
+  ref: "User",
+  localField: "user_id",
+  foreignField: "_id",
+  justOne: true,
 });
 
 module.exports = mongoose.model("Presentation", presentationSchema);

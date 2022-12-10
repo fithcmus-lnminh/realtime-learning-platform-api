@@ -10,9 +10,22 @@ exports.getPresentation = async (req, res) => {
     const presentation = await Presentation.findOne({
       _id: presentation_id,
       user_id: user._id,
-    }).populate("slides.slide_id");
+    })
+      .populate({
+        path: "slides.slide_id",
+      })
+      .populate({
+        path: "user",
+        select: "first_name last_name email",
+      })
+      .lean({ autopopulate: true });
 
-    console.log(presentation);
+    presentation.slides = presentation.slides.map((slide) => {
+      return {
+        slide_type: slide.slide_type,
+        content: slide.slide_id,
+      };
+    });
 
     res.json({
       code: API_CODE_SUCCESS,

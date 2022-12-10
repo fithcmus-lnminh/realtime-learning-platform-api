@@ -1,4 +1,5 @@
 const MultipleChoice = require("../models/multipleChoice.model.js");
+const Option = require("../models/option.model.js");
 const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 
 exports.createMultipleChoice = async (req, res) => {
@@ -6,8 +7,19 @@ exports.createMultipleChoice = async (req, res) => {
   const { presentation } = req;
 
   try {
+    const options = [];
+
+    for (let i = 0; i < 3; i++) {
+      const option = await Option.create({
+        content: "",
+      });
+
+      options.push(option._id);
+    }
+
     const multipleChoice = await MultipleChoice.create({
       question,
+      options,
     });
 
     presentation.slides.push({

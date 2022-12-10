@@ -4,7 +4,6 @@ const optionSchema = mongoose.Schema(
   {
     content: {
       type: String,
-      required: true,
     },
     upvotes: [
       {
