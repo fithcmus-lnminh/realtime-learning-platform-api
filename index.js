@@ -11,6 +11,7 @@ const userRouter = require("./routes/user.route");
 const presentationRouter = require("./routes/presentation.route");
 const passport = require("passport");
 const session = require("express-session");
+const cron = require('node-cron');
 
 const app = express();
 
@@ -49,5 +50,10 @@ app.use("/api/user", userRouter);
 app.use("/api/presentation", presentationRouter);
 
 app.use(errorHandler);
+
+//prevent hosting server shut down after 15 minutes
+cron.schedule('*/15 * * * *', () => {
+  console.log(`The app is still listening on port ${port}!`);
+});
 
 app.listen(port, () => console.log(`The app is listening on port ${port}!`));
