@@ -23,7 +23,7 @@ exports.getPresentation = async (req, res) => {
     presentation.slides = presentation.slides.map((slide) => {
       return {
         slide_type: slide.slide_type,
-        content: slide.slide_id,
+        content: {...slide.slide_id, options: slide.slide_id.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))},
       };
     });
 

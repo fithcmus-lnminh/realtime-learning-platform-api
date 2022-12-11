@@ -2,13 +2,10 @@ const Option = require("../models/option.model.js");
 const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 
 exports.createOption = async (req, res) => {
-  const { content } = req.body;
   const { multipleChoice } = req;
 
   try {
-    const option = await Option.create({
-      content,
-    });
+    const option = await Option.create({});
 
     multipleChoice.options.push(option._id);
 

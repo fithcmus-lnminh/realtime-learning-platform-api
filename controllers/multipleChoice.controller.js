@@ -11,7 +11,7 @@ exports.createMultipleChoice = async (req, res) => {
 
     for (let i = 0; i < 3; i++) {
       const option = await Option.create({
-        content: "",
+        content: "Option " + (i + 1),
       });
 
       options.push(option._id);
@@ -83,8 +83,11 @@ exports.updateMultipleChoice = async (req, res) => {
   const { question } = req.body;
   const { multipleChoice } = req;
 
+  console.log(question)
+
   try {
     multipleChoice.question = question;
+    multipleChoice.save();
 
     res.json({
       code: API_CODE_SUCCESS,
