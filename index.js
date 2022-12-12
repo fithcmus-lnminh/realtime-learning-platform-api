@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const { createServer } = require("http");
 const connectDb = require("./config/db");
 const { errorHandler } = require("./middlewares/error");
 const authRouter = require("./routes/auth.route");
@@ -9,6 +10,7 @@ const accountRouter = require("./routes/account.route");
 const OAuth2Router = require("./routes/oauth2.route");
 const userRouter = require("./routes/user.route");
 const presentationRouter = require("./routes/presentation.route");
+const anonymousRouter = require("./routes/anonymous.route");
 const passport = require("passport");
 const session = require("express-session");
 
@@ -47,7 +49,17 @@ app.use("/api/account", accountRouter);
 app.use("/auth/google", OAuth2Router);
 app.use("/api/user", userRouter);
 app.use("/api/presentation", presentationRouter);
+app.use("/api/anonymous", anonymousRouter);
 
 app.use(errorHandler);
 
-app.listen(port, () => console.log(`The app is listening on port ${port}!`));
+// app.listen(port, () => console.log(`The app is listening on port ${port}!`));
+
+const httpServer = createServer(app);
+httpServer.listen(port, () =>
+  console.log(`The app is listening on port ${port}!`)
+);
+
+module.exports = httpServer;
+
+require("./sockets/presentation").attach(httpServer);
