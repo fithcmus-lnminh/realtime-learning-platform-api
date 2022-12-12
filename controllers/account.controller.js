@@ -1,11 +1,9 @@
 const User = require("../models/user.model");
 const bcrypt = require("bcryptjs");
-const generateToken = require("../utils/generateToken");
-const jwt = require("jsonwebtoken");
 const {
   API_CODE_SUCCESS,
   API_CODE_BY_SERVER,
-  API_CODE_VALIDATION_ERROR
+  API_CODE_VALIDATION_ERROR,
 } = require("../constants");
 
 exports.updateAccount = async (req, res, next) => {
@@ -27,14 +25,14 @@ exports.updateAccount = async (req, res, next) => {
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        token: user.token
-      }
+        token: user.token,
+      },
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -60,21 +58,21 @@ exports.updatePassword = async (req, res, next) => {
           _id: user._id,
           email: user.email,
           first_name: user.first_name,
-          last_name: user.last_name
-        }
+          last_name: user.last_name,
+        },
       });
     } else {
       return res.json({
         code: API_CODE_VALIDATION_ERROR,
         message: "Current password is incorrect",
-        data: null
+        data: null,
       });
     }
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };

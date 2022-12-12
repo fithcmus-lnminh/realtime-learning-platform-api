@@ -7,7 +7,16 @@ const optionSchema = mongoose.Schema(
     },
     upvotes: [
       {
-        type: String,
+        user_type: {
+          type: String,
+          enum: ["Anonymous", "User"],
+          require: true,
+        },
+        user_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "upvotes.user_type",
+          require: true,
+        },
       },
     ],
   },

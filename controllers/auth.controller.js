@@ -3,7 +3,7 @@ const {
   API_CODE_SUCCESS,
   API_CODE_NOTFOUND,
   API_CODE_BY_SERVER,
-  API_CODE_VALIDATION_ERROR
+  API_CODE_VALIDATION_ERROR,
 } = require("../constants");
 const User = require("../models/user.model");
 const generateToken = require("../utils/generateToken");
@@ -15,15 +15,15 @@ exports.login = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email })
-    const token = generateToken(user._id, process.env.JWT_SECRET);
+    const user = await User.findOne({ email });
+    const token = generateToken(user._id, process.env.JWT_SECRET, "User");
 
     if (user && user.source === "google") {
-       return res.json({
-          code: API_CODE_VALIDATION_ERROR,
-          message: "This email is used for google login method",
-          data: null
-        });
+      return res.json({
+        code: API_CODE_VALIDATION_ERROR,
+        message: "This email is used for google login method",
+        data: null,
+      });
     }
 
     if (user && (await user.comparePassword(password))) {
@@ -39,21 +39,21 @@ exports.login = async (req, res, next) => {
             first_name: user.first_name,
             last_name: user.last_name,
             source: user.source,
-            token
-          }
+            token,
+          },
         });
       } else {
         return res.json({
           code: API_CODE_VALIDATION_ERROR,
           message: "Account has not already been verified",
-          data: null
+          data: null,
         });
       }
     } else {
       res.json({
         code: API_CODE_NOTFOUND,
         message: "Invalid email or password",
-        data: null
+        data: null,
       });
     }
   } catch (err) {
@@ -79,16 +79,20 @@ exports.register = async (req, res, next) => {
       email,
       password: hashedPassword,
       token: null,
-      activated: false
+      activated: false,
     });
 
     if (user) {
       res.json({
         code: API_CODE_SUCCESS,
         message: "Success",
-        data: null
+        data: null,
       });
-      const token = generateToken(user._id, process.env.EMAIL_VERIFIY_SECRET);
+      const token = generateToken(
+        user._id,
+        process.env.EMAIL_VERIFIY_SECRET,
+        "User"
+      );
       user.token = token;
       await user.save();
 
@@ -125,20 +129,20 @@ exports.verifyEmail = async (req, res, next) => {
       return res.json({
         code: API_CODE_SUCCESS,
         message: "Success",
-        data: null
+        data: null,
       });
     } else {
       res.json({
         code: API_CODE_BY_SERVER,
         message: "Token has been expired",
-        data: null
+        data: null,
       });
     }
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: "Invalid Token",
-      data: null
+      data: null,
     });
   }
 };
@@ -154,13 +158,13 @@ exports.logout = async (req, res, next) => {
   return res.json({
     code: 0,
     message: "Success",
-    data: null
+    data: null,
   });
 };
 
 exports.loginWithGoogle = (req, res, next) => {
   passport.authenticate("google", {
-    scope: ["profile", "email"]
+    scope: ["profile", "email"],
   })(req, res, next);
 };
 
@@ -168,6 +172,6 @@ exports.loginGoogleCallback = (req, res, next) => {
   passport.authenticate("google", {
     successRedirect: `${process.env.CLIENT_URL}/google-login`,
     failureRedirect: `${process.env.CLIENT_URL}/verify/google-login-error`,
-    keepSessionInfo: true
+    keepSessionInfo: true,
   })(req, res, next);
 };
