@@ -9,7 +9,12 @@ const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 const { Presentations } = require("../utils/presentations");
 const { Viewers } = require("../utils/viewers");
 
-const io = new Server();
+const io = new Server({
+  cors: {
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  },
+});
 const presentations = new Presentations();
 const viewers = new Viewers();
 
@@ -73,7 +78,15 @@ io.of("/presentation")
     });
 
     socket.on("teacher-start-presentation", async (data, callback) => {
-      const { access_code, current_slide } = data;
+      const { current_slide } = data;
+      const { is_teacher, access_code } = user;
+
+      if (!is_teacher) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not a teacher",
+        });
+      }
 
       const presentation = await Presentation.findOne({
         access_code,
@@ -340,6 +353,60 @@ io.of("/presentation")
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Option voted",
+      });
+    });
+
+    socket.on("student-check-vote", async (data, callback) => {
+      const { access_code } = user;
+
+      if (!access_code) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not in presentation",
+        });
+      }
+
+      const presentation = presentations.getPresentation(access_code);
+
+      if (!presentation) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation not found",
+        });
+      }
+
+      const slide = presentation.slides[presentation.current_slide - 1];
+
+      if (slide.slide_type !== "MultipleChoice") {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Slide is not multiple choice",
+        });
+      }
+
+      const voter = slide.content.options.find((option) => {
+        return option.upvotes.find(
+          (upvote) => upvote.user_id == user.id && upvote.user_type == user.type
+        );
+      });
+
+      if (!voter) {
+        return callback({
+          code: SOCKET_CODE_SUCCESS,
+          message: "User has not voted",
+          data: {
+            is_voted: false,
+          },
+        });
+      }
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "User has voted",
+        data: {
+          is_voted: true,
+          option_id: voter._id,
+        },
       });
     });
 
