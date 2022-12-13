@@ -1,6 +1,10 @@
 const generate = require("generate-password");
 const Presentation = require("../models/presentation.model");
-const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
+const {
+  API_CODE_SUCCESS,
+  API_CODE_BY_SERVER,
+  API_CODE_NOTFOUND,
+} = require("../constants");
 
 exports.getPresentation = async (req, res) => {
   const { user } = req;
@@ -156,6 +160,36 @@ exports.deletePresentation = async (req, res) => {
     });
   } catch (err) {
     res.json({
+      code: API_CODE_BY_SERVER,
+      message: err.message,
+      data: null,
+    });
+  }
+};
+
+exports.CheckAccessCodeValid = async (req, res, next) => {
+  const { access_code } = req.body;
+
+  try {
+    const presentation = await Presentation.findOne({ access_code });
+
+    if (!presentation) {
+      return res.json({
+        code: API_CODE_NOTFOUND,
+        message: "Access code not found",
+        data: null,
+      });
+    }
+
+    return res.json({
+      code: API_CODE_SUCCESS,
+      message: "Access code is valid",
+      data: {
+        group_id: presentation.group_id,
+      },
+    });
+  } catch (err) {
+    return res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
       data: null,
