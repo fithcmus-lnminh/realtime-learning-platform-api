@@ -124,7 +124,7 @@ io.of("/presentation")
 
       socket.to(access_code).emit("get-slide", {
         slide: presentation.slides[0],
-        current_slide: 1,
+        current_slide: current_slide,
         total_slides: presentation.slides.length,
       });
 
@@ -197,8 +197,6 @@ io.of("/presentation")
 
       const presentation = presentations.getPresentation(access_code);
       const next_slide = presentation.current_slide + 1;
-
-      console.log(next_slide);
 
       if (next_slide > presentation.slides.length) {
         return callback({

@@ -5,6 +5,7 @@ const {
   getPresentation,
   updatePresentation,
   deletePresentation,
+  CheckAccessCodeValid,
 } = require("../controllers/presentation.controller");
 const {
   checkGroupIdInBody,
@@ -15,6 +16,8 @@ const { isAuth } = require("../middlewares/auth");
 const multipleChoiceRouter = require("./multipleChoice.route");
 
 const router = express.Router();
+
+router.post("/access-code", CheckAccessCodeValid);
 
 router.use(isAuth);
 
