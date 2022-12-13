@@ -341,11 +341,11 @@ io.of("/presentation")
       });
 
       socket.to(access_code).emit("get-score", {
-        options: slide.content.options,
+        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
       });
 
       socket.emit("get-score", {
-        options: slide.content.options,
+        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
       });
 
       callback({
