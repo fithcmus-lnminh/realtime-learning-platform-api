@@ -12,8 +12,8 @@ const { Viewers } = require("../utils/viewers");
 const io = new Server({
   cors: {
     origin: process.env.CLIENT_URL,
-    credentials: true,
-  },
+    credentials: true
+  }
 });
 const presentations = new Presentations();
 const viewers = new Viewers();
@@ -56,13 +56,13 @@ io.of("/presentation")
 
       const presentation = await Presentation.findOne({
         access_code,
-        user_id: user.id,
+        user_id: user.id
       });
 
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Presentation not found",
+          message: "Presentation not found"
         });
       }
 
@@ -72,12 +72,12 @@ io.of("/presentation")
       socket.join(access_code);
 
       socket.emit("get-total-students", {
-        total_users: viewers.getTotalUsers(access_code),
+        total_users: viewers.getTotalUsers(access_code)
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Teacher joined presentation",
+        message: "Teacher joined presentation"
       });
     });
 
@@ -88,13 +88,13 @@ io.of("/presentation")
       if (!is_teacher) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not a teacher",
+          message: "User is not a teacher"
         });
       }
 
       const presentation = await Presentation.findOne({
         access_code,
-        user_id: user.id,
+        user_id: user.id
       })
         .populate("slides.slide_id")
         .lean({ autopopulate: true });
@@ -102,39 +102,48 @@ io.of("/presentation")
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Presentation not found",
+          message: "Presentation not found"
         });
       }
 
       if (current_slide > presentation.slides.length || current_slide < 1) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Invalid current slide",
+          message: "Invalid current slide"
         });
       }
 
       presentation.slides = presentation.slides.map((slide) => {
         return {
           slide_type: slide.slide_type,
-          content: slide.slide_id,
+          content: slide.slide_id
         };
       });
 
       presentations.addPresentation({
         access_code,
         slides: presentation.slides,
-        current_slide: parseInt(current_slide),
+        current_slide: parseInt(current_slide)
       });
 
       socket.to(access_code).emit("get-slide", {
-        slide: presentation.slides[0],
+        slide: {
+          ...presentation.slides[0],
+          content: {
+            ...presentation.slides[0].content,
+            options: presentation.slides[0].content.options.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        },
         current_slide: current_slide,
-        total_slides: presentation.slides.length,
+        total_slides: presentation.slides.length
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Presentation started",
+        message: "Presentation started"
       });
     });
 
@@ -144,18 +153,18 @@ io.of("/presentation")
       if (user.access_code) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User already joined presentation",
+          message: "User already joined presentation"
         });
       }
 
       const presentation = await Presentation.findOne({
-        access_code,
+        access_code
       });
 
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Presentation not found",
+          message: "Presentation not found"
         });
       }
 
@@ -163,19 +172,19 @@ io.of("/presentation")
         presentation.group_id &&
         !(await GroupUser.findOne({
           user_id: user.id,
-          group_id: presentation.group_id,
+          group_id: presentation.group_id
         }))
       ) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User not in group",
+          message: "User not in group"
         });
       }
 
       viewers.addViewer({
         access_code,
         id: user.id,
-        type: user.type,
+        type: user.type
       });
 
       user.access_code = access_code;
@@ -183,16 +192,16 @@ io.of("/presentation")
       socket.join(access_code);
 
       socket.to(access_code).emit("get-total-students", {
-        total_users: viewers.getTotalUsers(access_code),
+        total_users: viewers.getTotalUsers(access_code)
       });
 
       socket.emit("get-total-students", {
-        total_users: viewers.getTotalUsers(access_code),
+        total_users: viewers.getTotalUsers(access_code)
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Student joined presentation",
+        message: "Student joined presentation"
       });
     });
 
@@ -202,7 +211,7 @@ io.of("/presentation")
       if (!is_teacher) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not teacher",
+          message: "User is not teacher"
         });
       }
 
@@ -212,21 +221,29 @@ io.of("/presentation")
       if (next_slide > presentation.slides.length) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "No more slides",
+          message: "No more slides"
         });
       }
 
       presentation.current_slide = next_slide;
 
       socket.to(access_code).emit("get-slide", {
-        slide: presentation.slides[next_slide - 1],
+        slide: {
+          ...presentation.slides[next_slide - 1],
+          content: {
+            ...presentation.slides[next_slide - 1].content,
+            options: presentation.slides[next_slide - 1].content.options.map(
+              (option) => ({ ...option, numUpvote: option.upvotes.length })
+            )
+          }
+        },
         current_slide: next_slide,
-        total_slides: presentation.slides.length,
+        total_slides: presentation.slides.length
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Next slide",
+        message: "Next slide"
       });
     });
 
@@ -236,7 +253,7 @@ io.of("/presentation")
       if (!is_teacher) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not teacher",
+          message: "User is not teacher"
         });
       }
 
@@ -246,21 +263,32 @@ io.of("/presentation")
       if (previous_slide < 1) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "No more slides",
+          message: "No more slides"
         });
       }
 
       presentation.current_slide = previous_slide;
 
       socket.to(access_code).emit("get-slide", {
-        slide: presentation.slides[previous_slide - 1],
+        slide: {
+          ...presentation.slides[previous_slide - 1],
+          content: {
+            ...presentation.slides[previous_slide - 1].content,
+            options: presentation.slides[
+              previous_slide - 1
+            ].content.options.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        },
         current_slide: previous_slide,
-        total_slides: presentation.slides.length,
+        total_slides: presentation.slides.length
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Previous slide",
+        message: "Previous slide"
       });
     });
 
@@ -270,7 +298,7 @@ io.of("/presentation")
       if (!is_teacher) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not teacher",
+          message: "User is not teacher"
         });
       }
 
@@ -280,7 +308,7 @@ io.of("/presentation")
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Presentation ended",
+        message: "Presentation ended"
       });
     });
 
@@ -291,7 +319,7 @@ io.of("/presentation")
       if (!access_code) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not in presentation",
+          message: "User is not in presentation"
         });
       }
 
@@ -300,7 +328,7 @@ io.of("/presentation")
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Presentation not found",
+          message: "Presentation not found"
         });
       }
 
@@ -309,7 +337,7 @@ io.of("/presentation")
       if (slide.slide_type !== "MultipleChoice") {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Slide is not multiple choice",
+          message: "Slide is not multiple choice"
         });
       }
 
@@ -320,7 +348,7 @@ io.of("/presentation")
       if (!option) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Option not found",
+          message: "Option not found"
         });
       }
 
@@ -333,7 +361,7 @@ io.of("/presentation")
       if (voter) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User already voted",
+          message: "User already voted"
         });
       }
 
@@ -341,33 +369,33 @@ io.of("/presentation")
 
       optionInDb.upvotes.push({
         user_id: user.id,
-        user_type: user.type,
+        user_type: user.type
       });
 
       await optionInDb.save();
 
       option.upvotes.push({
         user_id: user.id,
-        user_type: user.type,
+        user_type: user.type
       });
 
       socket.to(access_code).emit("get-score", {
         options: slide.content.options.map((option) => ({
           ...option,
-          numUpvote: option.upvotes.length,
-        })),
+          numUpvote: option.upvotes.length
+        }))
       });
 
       socket.emit("get-score", {
         options: slide.content.options.map((option) => ({
           ...option,
-          numUpvote: option.upvotes.length,
-        })),
+          numUpvote: option.upvotes.length
+        }))
       });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Option voted",
+        message: "Option voted"
       });
     });
 
@@ -377,7 +405,7 @@ io.of("/presentation")
       if (!access_code) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not in presentation",
+          message: "User is not in presentation"
         });
       }
 
@@ -386,7 +414,7 @@ io.of("/presentation")
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Presentation not found",
+          message: "Presentation not found"
         });
       }
 
@@ -395,7 +423,7 @@ io.of("/presentation")
       if (slide.slide_type !== "MultipleChoice") {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "Slide is not multiple choice",
+          message: "Slide is not multiple choice"
         });
       }
 
@@ -410,8 +438,8 @@ io.of("/presentation")
           code: SOCKET_CODE_SUCCESS,
           message: "User has not voted",
           data: {
-            is_voted: false,
-          },
+            is_voted: false
+          }
         });
       }
 
@@ -420,8 +448,8 @@ io.of("/presentation")
         message: "User has voted",
         data: {
           is_voted: true,
-          option_id: voter._id,
-        },
+          option_id: voter._id
+        }
       });
     });
 
@@ -433,7 +461,7 @@ io.of("/presentation")
         viewers.removeViewer(access_code, user.id);
 
         socket.to(access_code).emit("get-total-students", {
-          total_users: viewers.getTotalUsers(access_code),
+          total_users: viewers.getTotalUsers(access_code)
         });
       }
 
