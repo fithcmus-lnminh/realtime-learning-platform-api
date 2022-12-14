@@ -21,32 +21,32 @@ const viewers = new Viewers();
 io.of("/presentation")
   .use(async (socket, next) => {
     try {
-    const { token } = socket.handshake.headers;
+      const { token } = socket.handshake.headers;
 
-    if (!token) {
-      return next(new Error("Missing token"));
+      if (!token) {
+        return next(new Error("Missing token"));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      if (!decoded) {
+        return next(new Error("Invalid token"));
+      }
+
+      socket.user = decoded;
+
+      if (
+        (socket.user.role === "Anonymous" &&
+          !(await Anonymous.findById(socket.user.id))) ||
+        (socket.user.role === "User" && !(await User.findById(socket.user.id)))
+      ) {
+        return next(new Error("User not found"));
+      }
+
+      next();
+    } catch (err) {
+      return new Error(err.message);
     }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (!decoded) {
-      return next(new Error("Invalid token"));
-    }
-
-    socket.user = decoded;
-
-    if (
-      (socket.user.role === "Anonymous" &&
-        !(await Anonymous.findById(socket.user.id))) ||
-      (socket.user.role === "User" && !(await User.findById(socket.user.id)))
-    ) {
-      return next(new Error("User not found"));
-    }
-
-    next();
-  } catch (err) {
-    return new Error(err.message)
-  }
   })
   .on("connection", (socket) => {
     const { user } = socket;
@@ -140,6 +140,13 @@ io.of("/presentation")
 
     socket.on("student-join-presentation", async (data, callback) => {
       const { access_code } = data;
+
+      if (user.access_code) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User already joined presentation",
+        });
+      }
 
       const presentation = await Presentation.findOne({
         access_code,
@@ -345,11 +352,17 @@ io.of("/presentation")
       });
 
       socket.to(access_code).emit("get-score", {
-        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length,
+        })),
       });
 
       socket.emit("get-score", {
-        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length,
+        })),
       });
 
       callback({
