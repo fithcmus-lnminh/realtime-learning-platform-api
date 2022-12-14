@@ -20,6 +20,7 @@ const viewers = new Viewers();
 
 io.of("/presentation")
   .use(async (socket, next) => {
+    try {
     const { token } = socket.handshake.headers;
 
     if (!token) {
@@ -43,6 +44,9 @@ io.of("/presentation")
     }
 
     next();
+  } catch (err) {
+    return new Error(err.message)
+  }
   })
   .on("connection", (socket) => {
     const { user } = socket;
