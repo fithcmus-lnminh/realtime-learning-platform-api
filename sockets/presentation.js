@@ -137,6 +137,13 @@ io.of("/presentation")
     socket.on("student-join-presentation", async (data, callback) => {
       const { access_code } = data;
 
+      if (user.access_code) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User already joined presentation",
+        });
+      }
+
       const presentation = await Presentation.findOne({
         access_code,
       });
@@ -341,11 +348,17 @@ io.of("/presentation")
       });
 
       socket.to(access_code).emit("get-score", {
-        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length,
+        })),
       });
 
       socket.emit("get-score", {
-        options: slide.content.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length,
+        })),
       });
 
       callback({

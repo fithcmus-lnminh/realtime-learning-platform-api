@@ -13,7 +13,7 @@ const presentationRouter = require("./routes/presentation.route");
 const anonymousRouter = require("./routes/anonymous.route");
 const passport = require("passport");
 const session = require("express-session");
-const cron = require('node-cron');
+const cron = require("node-cron");
 
 const app = express();
 
@@ -55,7 +55,7 @@ app.use("/api/anonymous", anonymousRouter);
 app.use(errorHandler);
 
 //prevent hosting server shut down after 15 minutes
-cron.schedule('*/15 * * * *', () => {
+cron.schedule("*/15 * * * *", () => {
   console.log(`The app is still listening on port ${port}!`);
 });
 
