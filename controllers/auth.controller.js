@@ -4,6 +4,7 @@ const {
   API_CODE_NOTFOUND,
   API_CODE_BY_SERVER,
   API_CODE_VALIDATION_ERROR,
+  API_CODE_UNAUTHORIZED,
 } = require("../constants");
 const User = require("../models/user.model");
 const generateToken = require("../utils/generateToken");
@@ -174,4 +175,24 @@ exports.loginGoogleCallback = (req, res, next) => {
     failureRedirect: `${process.env.CLIENT_URL}/verify/google-login-error`,
     keepSessionInfo: true,
   })(req, res, next);
+};
+
+exports.getTokenGoogle = (req, res) => {
+  if (req.user) {
+    const token = generateToken(req.user._id, process.env.JWT_SECRET, "User");
+
+    res.json({
+      code: API_CODE_SUCCESS,
+      message: "Success",
+      data: {
+        token: token,
+      },
+    });
+  } else {
+    res.json({
+      code: API_CODE_UNAUTHORIZED,
+      message: "Unauthorized",
+      data: null,
+    });
+  }
 };
