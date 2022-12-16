@@ -2,6 +2,7 @@ const ResetPasswordToken = require("../models/resetPasswordToken.model");
 const {
   API_CODE_SUCCESS,
   API_CODE_NOTFOUND,
+  API_CODE_PERMISSION_DENIED,
   API_CODE_BY_SERVER,
 } = require("../constants");
 const sendMail = require("../utils/mailer");
@@ -14,6 +15,14 @@ exports.createResetPasswordToken = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
+
+    if (user.source !== "normal")
+      return res.json({
+        code: API_CODE_PERMISSION_DENIED,
+        message: "You can't reset password with this email",
+        data: null,
+      });
+
     const resetPasswordToken = await ResetPasswordToken.findOneAndUpdate(
       {
         user_id: user._id,
