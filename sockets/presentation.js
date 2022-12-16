@@ -141,6 +141,21 @@ io.of("/presentation")
         total_slides: presentation.slides.length
       });
 
+      socket.emit("get-slide", {
+        slide: {
+          ...presentation.slides[0],
+          content: {
+            ...presentation.slides[0].content,
+            options: presentation.slides[0].content.options.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        },
+        current_slide: current_slide,
+        total_slides: presentation.slides.length
+      });
+
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Presentation started"
@@ -241,6 +256,20 @@ io.of("/presentation")
         total_slides: presentation.slides.length
       });
 
+      socket.emit("get-slide", {
+        slide: {
+          ...presentation.slides[next_slide - 1],
+          content: {
+            ...presentation.slides[next_slide - 1].content,
+            options: presentation.slides[next_slide - 1].content.options.map(
+              (option) => ({ ...option, numUpvote: option.upvotes.length })
+            )
+          }
+        },
+        current_slide: next_slide,
+        total_slides: presentation.slides.length
+      });
+
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Next slide"
@@ -270,6 +299,23 @@ io.of("/presentation")
       presentation.current_slide = previous_slide;
 
       socket.to(access_code).emit("get-slide", {
+        slide: {
+          ...presentation.slides[previous_slide - 1],
+          content: {
+            ...presentation.slides[previous_slide - 1].content,
+            options: presentation.slides[
+              previous_slide - 1
+            ].content.options.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        },
+        current_slide: previous_slide,
+        total_slides: presentation.slides.length
+      });
+
+      socket.emit("get-slide", {
         slide: {
           ...presentation.slides[previous_slide - 1],
           content: {
