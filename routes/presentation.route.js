@@ -15,6 +15,7 @@ const {
 const { isAuth } = require("../middlewares/auth");
 const multipleChoiceRouter = require("./multipleChoice.route");
 const headingRouter = require("./heading.route");
+const paragraphRouter = require("./paragraph.route");
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.delete("/:presentation_id", deletePresentation);
 
 router.use("/:presentation_id/multiple-choice", multipleChoiceRouter);
 router.use("/:presentation_id/heading", headingRouter);
+router.use("/:presentation_id/paragraph", paragraphRouter);
 
 module.exports = router;

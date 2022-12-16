@@ -1,19 +1,19 @@
-const Heading = require("../models/heading.model.js");
+const Paragraph = require("../models/paragraph.model.js");
 const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 
-exports.createHeading = async (req, res) => {
-  const { heading, subheading } = req.body;
+exports.createParagraph = async (req, res) => {
+  const { paragraph, heading } = req.body;
   const { presentation } = req;
 
   try {
-    const headingSlide = await Heading.create({
-      heading,
-      subheading
+    const paragraphSlide = await Paragraph.create({
+      paragraph,
+      heading
     });
 
     presentation.slides.push({
-      slide_type: "Heading",
-      slide_id: headingSlide._id
+      slide_type: "Paragraph",
+      slide_id: paragraphSlide._id
     });
 
     await presentation.save();
@@ -22,7 +22,7 @@ exports.createHeading = async (req, res) => {
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        heading: headingSlide
+        paragraph: paragraphSlide
       }
     });
   } catch (err) {
@@ -34,14 +34,14 @@ exports.createHeading = async (req, res) => {
   }
 };
 
-exports.getHeadings = async (req, res) => {
+exports.getParagraphs = async (req, res) => {
   const { presentation } = req;
 
   try {
-    const headings = await Heading.find({
+    const paragraphs = await Paragraph.find({
       _id: {
         $in: presentation.slides
-          .filter((slide) => slide.slide_type === "Heading")
+          .filter((slide) => slide.slide_type === "Paragraph")
           .map((slide) => slide.slide_id)
       }
     });
@@ -50,7 +50,7 @@ exports.getHeadings = async (req, res) => {
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        headings
+        paragraphs
       }
     });
   } catch (err) {
@@ -62,33 +62,32 @@ exports.getHeadings = async (req, res) => {
   }
 };
 
-exports.getHeading = async (req, res) => {
-  const { heading } = req;
+exports.getParagraph = async (req, res) => {
+  const { paragraph } = req;
 
   res.json({
     code: API_CODE_SUCCESS,
     message: "Success",
     data: {
-      heading
+      paragraph
     }
   });
 };
 
-exports.updateHeading = async (req, res) => {
-  const { heading } = req;
-  const { heading: newHeading, subheading: newSubheading } = req.body;
+exports.updateParagraph = async (req, res) => {
+  const { paragraph } = req;
+  const { paragraph: newParagraph, heading: newHeading } = req.body;
 
   try {
-    heading.heading = newHeading;
-    heading.subheading = newSubheading;
-
-    await heading.save();
+    paragraph.paragraph = newParagraph;
+    paragraph.heading = newHeading;
+    await paragraph.save();
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        heading
+        paragraph
       }
     });
   } catch (err) {
@@ -100,16 +99,14 @@ exports.updateHeading = async (req, res) => {
   }
 };
 
-exports.deleteHeading = async (req, res) => {
-  const { heading, presentation } = req;
+exports.deleteParagraph = async (req, res) => {
+  const { paragraph, presentation } = req;
 
   try {
-    await heading.remove();
-
+    await paragraph.remove();
     presentation.slides = presentation.slides.filter(
-      (slide) => slide.slide_id.toString() != heading._id.toString()
+      (slide) => slide.slide_id.toString() != paragraph._id.toString()
     );
-
     await presentation.save();
 
     res.json({
