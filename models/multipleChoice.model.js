@@ -5,17 +5,18 @@ const multipleChoiceSchema = mongoose.Schema(
   {
     question: {
       type: String,
+      default: ""
     },
     options: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Option",
-        autopopulate: true,
-      },
-    ],
+        autopopulate: true
+      }
+    ]
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
 
@@ -29,7 +30,7 @@ multipleChoiceSchema.pre("deleteMany", async function (next) {
     .flat();
 
   await Option.deleteMany({
-    _id: optionIds,
+    _id: optionIds
   });
 
   next();
@@ -40,8 +41,8 @@ multipleChoiceSchema.pre("remove", async function (next) {
 
   await Option.deleteMany({
     _id: {
-      $in: multipleChoice.options,
-    },
+      $in: multipleChoice.options
+    }
   });
 
   next();

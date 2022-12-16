@@ -5,15 +5,16 @@ const {
   getPresentation,
   updatePresentation,
   deletePresentation,
-  CheckAccessCodeValid,
+  CheckAccessCodeValid
 } = require("../controllers/presentation.controller");
 const {
   checkGroupIdInBody,
   isPresentationExist,
-  isPresentationOwner,
+  isPresentationOwner
 } = require("../middlewares/presentation");
 const { isAuth } = require("../middlewares/auth");
 const multipleChoiceRouter = require("./multipleChoice.route");
+const headingRouter = require("./heading.route");
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.put("/:presentation_id", updatePresentation);
 router.delete("/:presentation_id", deletePresentation);
 
 router.use("/:presentation_id/multiple-choice", multipleChoiceRouter);
+router.use("/:presentation_id/heading", headingRouter);
 
 module.exports = router;
