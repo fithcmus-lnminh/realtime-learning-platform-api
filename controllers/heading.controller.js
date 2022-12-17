@@ -79,8 +79,8 @@ exports.updateHeading = async (req, res) => {
   const { heading: newHeading, subheading: newSubheading } = req.body;
 
   try {
-    heading.heading = newHeading;
-    heading.subheading = newSubheading;
+    if (newHeading) heading.heading = newHeading;
+    if (newSubheading) heading.subheading = newSubheading;
 
     await heading.save();
 

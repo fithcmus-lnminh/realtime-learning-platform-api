@@ -131,7 +131,7 @@ io.of("/presentation")
           ...presentation.slides[0],
           content: {
             ...presentation.slides[0].content,
-            options: presentation.slides[0].content.options.map((option) => ({
+            options: presentation.slides[0].content?.options?.map((option) => ({
               ...option,
               numUpvote: option.upvotes.length
             }))
@@ -146,7 +146,7 @@ io.of("/presentation")
           ...presentation.slides[0],
           content: {
             ...presentation.slides[0].content,
-            options: presentation.slides[0].content.options.map((option) => ({
+            options: presentation.slides[0].content?.options?.map((option) => ({
               ...option,
               numUpvote: option.upvotes.length
             }))
@@ -247,7 +247,7 @@ io.of("/presentation")
           ...presentation.slides[next_slide - 1],
           content: {
             ...presentation.slides[next_slide - 1].content,
-            options: presentation.slides[next_slide - 1].content.options.map(
+            options: presentation.slides[next_slide - 1].content?.options?.map(
               (option) => ({ ...option, numUpvote: option.upvotes.length })
             )
           }
@@ -261,7 +261,7 @@ io.of("/presentation")
           ...presentation.slides[next_slide - 1],
           content: {
             ...presentation.slides[next_slide - 1].content,
-            options: presentation.slides[next_slide - 1].content.options.map(
+            options: presentation.slides[next_slide - 1].content?.options?.map(
               (option) => ({ ...option, numUpvote: option.upvotes.length })
             )
           }
@@ -305,7 +305,7 @@ io.of("/presentation")
             ...presentation.slides[previous_slide - 1].content,
             options: presentation.slides[
               previous_slide - 1
-            ].content.options.map((option) => ({
+            ].content?.options?.map((option) => ({
               ...option,
               numUpvote: option.upvotes.length
             }))
@@ -322,7 +322,7 @@ io.of("/presentation")
             ...presentation.slides[previous_slide - 1].content,
             options: presentation.slides[
               previous_slide - 1
-            ].content.options.map((option) => ({
+            ].content?.options?.map((option) => ({
               ...option,
               numUpvote: option.upvotes.length
             }))

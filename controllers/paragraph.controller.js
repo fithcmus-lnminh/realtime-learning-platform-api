@@ -79,8 +79,8 @@ exports.updateParagraph = async (req, res) => {
   const { paragraph: newParagraph, heading: newHeading } = req.body;
 
   try {
-    paragraph.paragraph = newParagraph;
-    paragraph.heading = newHeading;
+    if (newParagraph) paragraph.paragraph = newParagraph;
+    if (newHeading) paragraph.heading = newHeading;
     await paragraph.save();
 
     res.json({
