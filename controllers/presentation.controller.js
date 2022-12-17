@@ -3,7 +3,7 @@ const Presentation = require("../models/presentation.model");
 const {
   API_CODE_SUCCESS,
   API_CODE_BY_SERVER,
-  API_CODE_NOTFOUND,
+  API_CODE_NOTFOUND
 } = require("../constants");
 
 exports.getPresentation = async (req, res) => {
@@ -13,36 +13,49 @@ exports.getPresentation = async (req, res) => {
   try {
     const presentation = await Presentation.findOne({
       _id: presentation_id,
-      user_id: user._id,
+      user_id: user._id
     })
       .populate({
-        path: "slides.slide_id",
+        path: "slides.slide_id"
       })
       .populate({
         path: "user",
-        select: "first_name last_name email",
+        select: "first_name last_name email"
       })
       .lean({ autopopulate: true });
 
     presentation.slides = presentation.slides.map((slide) => {
-      return {
-        slide_type: slide.slide_type,
-        content: {...slide.slide_id, options: slide.slide_id.options.map(option => ({ ...option, numUpvote: option.upvotes.length }))},
-      };
+      if (slide.slide_type == "MultipleChoice")
+        return {
+          slide_type: slide.slide_type,
+          content: {
+            ...slide.slide_id,
+            options: slide.slide_id.options.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        };
+      else {
+        return {
+          slide_type: slide.slide_type,
+          content: slide.slide_id
+        };
+      }
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentation,
-      },
+        presentation
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -54,21 +67,21 @@ exports.getPresentations = async (req, res) => {
   try {
     const presentations = await Presentation.find({
       user_id: user._id,
-      group_id: group_id,
+      group_id: group_id
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentations,
-      },
+        presentations
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -85,7 +98,7 @@ exports.createPresentation = async (req, res) => {
       lowercase: true,
       symbols: false,
       excludeSimilarCharacters: true,
-      strict: true,
+      strict: true
     });
 
     while (await Presentation.exists({ access_code })) {
@@ -96,7 +109,7 @@ exports.createPresentation = async (req, res) => {
         lowercase: true,
         symbols: false,
         excludeSimilarCharacters: true,
-        strict: true,
+        strict: true
       });
     }
 
@@ -104,21 +117,21 @@ exports.createPresentation = async (req, res) => {
       title,
       access_code,
       user_id: user._id,
-      group_id,
+      group_id
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentation,
-      },
+        presentation
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -135,14 +148,14 @@ exports.updatePresentation = async (req, res) => {
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentation,
-      },
+        presentation
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -156,13 +169,13 @@ exports.deletePresentation = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -177,7 +190,7 @@ exports.CheckAccessCodeValid = async (req, res, next) => {
       return res.json({
         code: API_CODE_NOTFOUND,
         message: "Access code not found",
-        data: null,
+        data: null
       });
     }
 
@@ -185,14 +198,14 @@ exports.CheckAccessCodeValid = async (req, res, next) => {
       code: API_CODE_SUCCESS,
       message: "Access code is valid",
       data: {
-        group_id: presentation.group_id,
-      },
+        group_id: presentation.group_id
+      }
     });
   } catch (err) {
     return res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
