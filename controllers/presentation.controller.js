@@ -161,7 +161,8 @@ exports.getPresentations = async (req, res) => {
       }
     ]);
 
-    const { totalPresentations } = presentations[0].totalPresentations[0];
+    const { totalPresentations = 0 } =
+      presentations[0].totalPresentations[0] ?? {};
     const totalPages = Math.ceil(totalPresentations / limit);
 
     res.json({
