@@ -5,6 +5,7 @@ const {
   API_CODE_BY_SERVER,
   API_CODE_NOTFOUND
 } = require("../constants");
+const PresentationUser = require("../models/presentationUser.model");
 
 exports.getPresentation = async (req, res) => {
   const { user } = req;
@@ -118,6 +119,12 @@ exports.createPresentation = async (req, res) => {
       access_code,
       user_id: user._id,
       group_id
+    });
+
+    await PresentationUser.create({
+      user_id: user._id,
+      presentation_id: presentation._id,
+      role: "Owner"
     });
 
     res.json({

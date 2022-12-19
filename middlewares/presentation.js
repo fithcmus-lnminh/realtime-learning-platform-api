@@ -1,10 +1,11 @@
 const Group = require("../models/group.model");
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
+const PresentationUser = require("../models/presentationUser.model");
 const {
   API_CODE_PERMISSION_DENIED,
   API_CODE_NOTFOUND,
-  API_CODE_BY_SERVER,
+  API_CODE_BY_SERVER
 } = require("../constants");
 
 exports.isPresentationExist = async (req, res, next) => {
@@ -17,7 +18,7 @@ exports.isPresentationExist = async (req, res, next) => {
       res.json({
         code: API_CODE_NOTFOUND,
         message: "Presentation does not exist",
-        data: null,
+        data: null
       });
     } else {
       req.presentation = presentation;
@@ -27,19 +28,47 @@ exports.isPresentationExist = async (req, res, next) => {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
+    });
+  }
+};
+
+exports.isPresentationUserExist = async (req, res, next) => {
+  const { presentation, user } = req;
+
+  try {
+    const presentationMember = await PresentationUser.findOne({
+      presentation_id: presentation._id,
+      user_id: user._id
+    });
+
+    if (!presentationMember) {
+      res.json({
+        code: API_CODE_PERMISSION_DENIED,
+        message: "You are not the member of this presentation",
+        data: null
+      });
+    } else {
+      req.presentationMember = presentationMember;
+      next();
+    }
+  } catch {
+    res.json({
+      code: API_CODE_BY_SERVER,
+      message: err.message,
+      data: null
     });
   }
 };
 
 exports.isPresentationOwner = async (req, res, next) => {
-  const { presentation, user } = req;
+  const { presentationMember } = req;
 
-  if (presentation.user_id.toString() !== user._id.toString()) {
+  if (presentationMember.role !== "Owner") {
     res.json({
       code: API_CODE_PERMISSION_DENIED,
       message: "You are not the owner of this presentation",
-      data: null,
+      data: null
     });
   } else {
     next();
@@ -55,7 +84,7 @@ exports.checkGroupIdInBody = async (req, res, next) => {
       if (await Group.exists({ _id: group_id })) {
         const groupUser = await GroupUser.findOne({
           group_id,
-          user_id: user._id,
+          user_id: user._id
         });
 
         if (groupUser) {
@@ -63,26 +92,26 @@ exports.checkGroupIdInBody = async (req, res, next) => {
             res.json({
               code: API_CODE_PERMISSION_DENIED,
               message: "Only group owner can create presentation",
-              data: null,
+              data: null
             });
           } else next();
         } else
           res.json({
             code: API_CODE_PERMISSION_DENIED,
             message: "You have not joined this group",
-            data: null,
+            data: null
           });
       } else
         res.json({
           code: API_CODE_NOTFOUND,
           message: "Group does not exist",
-          data: null,
+          data: null
         });
     } catch (err) {
       res.json({
         code: API_CODE_BY_SERVER,
         message: err.message,
-        data: null,
+        data: null
       });
     }
   } else {
