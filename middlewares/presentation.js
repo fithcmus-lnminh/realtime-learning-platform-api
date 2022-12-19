@@ -37,19 +37,19 @@ exports.isPresentationUserExist = async (req, res, next) => {
   const { presentation, user } = req;
 
   try {
-    const presentationMember = await PresentationUser.findOne({
+    const presentationUser = await PresentationUser.findOne({
       presentation_id: presentation._id,
       user_id: user._id
     });
 
-    if (!presentationMember) {
+    if (!presentationUser) {
       res.json({
         code: API_CODE_PERMISSION_DENIED,
         message: "You are not the member of this presentation",
         data: null
       });
     } else {
-      req.presentationMember = presentationMember;
+      req.presentationUser = presentationUser;
       next();
     }
   } catch {
@@ -62,9 +62,9 @@ exports.isPresentationUserExist = async (req, res, next) => {
 };
 
 exports.isPresentationOwner = async (req, res, next) => {
-  const { presentationMember } = req;
+  const { presentationUser } = req;
 
-  if (presentationMember.role !== "Owner") {
+  if (presentationUser.role !== "Owner") {
     res.json({
       code: API_CODE_PERMISSION_DENIED,
       message: "You are not the owner of this presentation",

@@ -1,44 +1,46 @@
 const mongoose = require("mongoose");
 const MultipleChoice = require("./multipleChoice.model.js");
+const PresentationUser = require("./presentationUser.model.js");
+const CollaboratorToken = require("./collaboratorToken.model.js");
 
 const presentationSchema = mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
+      required: true
     },
     slides: [
       {
         slide_type: {
           type: String,
           enum: ["MultipleChoice", "Paragraph", "Heading"],
-          required: true,
+          required: true
         },
         slide_id: {
           type: mongoose.Schema.Types.ObjectId,
           refPath: "slides.slide_type",
-          required: true,
-        },
-      },
+          required: true
+        }
+      }
     ],
     access_code: {
       type: String,
-      required: true,
+      required: true
     },
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: true
     },
     group_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-    },
+      ref: "Group"
+    }
   },
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-    timestamps: true,
+    timestamps: true
   }
 );
 
@@ -49,8 +51,16 @@ presentationSchema.pre("remove", async function (next) {
     _id: {
       $in: presentation.slides
         .filter((slide) => slide.slide_type === "MultipleChoice")
-        .map((slide) => slide.slide_id),
-    },
+        .map((slide) => slide.slide_id)
+    }
+  });
+
+  await PresentationUser.deleteMany({
+    presentation_id: presentation._id
+  });
+
+  await CollaboratorToken.deleteMany({
+    presentation_id: presentation._id
   });
 
   next();
@@ -60,7 +70,7 @@ presentationSchema.virtual("user", {
   ref: "User",
   localField: "user_id",
   foreignField: "_id",
-  justOne: true,
+  justOne: true
 });
 
 module.exports = mongoose.model("Presentation", presentationSchema);

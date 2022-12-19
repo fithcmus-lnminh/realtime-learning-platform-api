@@ -6,9 +6,10 @@ const {
   API_CODE_NOTFOUND
 } = require("../constants");
 const PresentationUser = require("../models/presentationUser.model");
+const GroupUser = require("../models/groupUser.model");
 
 exports.getPresentation = async (req, res) => {
-  const { user } = req;
+  const { user, presentationUser } = req;
   const { presentation_id } = req.params;
 
   try {
@@ -45,6 +46,8 @@ exports.getPresentation = async (req, res) => {
       }
     });
 
+    presentation.presentation_role = presentationUser.role;
+
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
@@ -63,19 +66,110 @@ exports.getPresentation = async (req, res) => {
 
 exports.getPresentations = async (req, res) => {
   const { user } = req;
-  const { group_id } = req.query;
+  const { group_id, page = 1, limit = 10, role } = req.query;
 
   try {
-    const presentations = await Presentation.find({
-      user_id: user._id,
-      group_id: group_id
+    const presentationUsers = await PresentationUser.find({
+      user_id: user._id
     });
+
+    const presentationIds = presentationUsers.map(
+      (presentationUser) => presentationUser.presentation_id
+    );
+
+    const presentations = await Presentation.aggregate([
+      {
+        $match: {
+          _id: { $in: presentationIds }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $lookup: {
+          from: "presentationusers",
+          localField: "_id",
+          foreignField: "presentation_id",
+          as: "presentationUsers"
+        }
+      },
+      {
+        $unwind: "$presentationUsers"
+      },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "group_id",
+          foreignField: "_id",
+          as: "group"
+        }
+      },
+      {
+        $unwind: {
+          path: "$group",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: {
+          "presentationUsers.user_id": user._id,
+          "presentationUsers.role": role
+            ? { $in: Array.isArray(role) ? role : [role] }
+            : { $ne: null }
+        }
+      },
+      {
+        $facet: {
+          data: [
+            {
+              $project: {
+                owner: {
+                  email: "$user.email",
+                  first_name: "$user.first_name",
+                  last_name: "$user.last_name"
+                },
+                presentation_role: "$presentationUsers.role",
+                title: 1,
+                access_code: 1,
+                group: {
+                  name: 1,
+                  description: 1
+                },
+                createdAt: 1,
+                updatedAt: 1,
+                slides: 1
+              }
+            },
+            {
+              $skip: (page - 1) * limit
+            },
+            {
+              $limit: limit
+            }
+          ],
+          totalPresentations: [{ $count: "totalPresentations" }]
+        }
+      }
+    ]);
+
+    const { totalPresentations } = presentations[0].totalPresentations[0];
+    const totalPages = Math.ceil(totalPresentations / limit);
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentations
+        presentations: presentations[0].data,
+        total_pages: totalPages
       }
     });
   } catch (err) {
@@ -127,6 +221,23 @@ exports.createPresentation = async (req, res) => {
       role: "Owner"
     });
 
+    if (group_id) {
+      const GroupUsers = await GroupUser.find({
+        group_id,
+        role: "Co-Owner"
+      });
+
+      const groupUserIds = GroupUsers.map((groupUser) => groupUser.user_id);
+
+      await PresentationUser.insertMany(
+        groupUserIds.map((groupUserId) => ({
+          user_id: groupUserId,
+          presentation_id: presentation._id,
+          role: "Co-Owner"
+        }))
+      );
+    }
+
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
@@ -144,11 +255,37 @@ exports.createPresentation = async (req, res) => {
 };
 
 exports.updatePresentation = async (req, res) => {
-  const { title } = req.body;
+  const { title, group_id } = req.body;
   const { presentation } = req;
 
   try {
+    if (presentation.group_id && group_id !== presentation.group_id) {
+      await PresentationUser.deleteMany({
+        presentation_id: presentation._id,
+        role: "Co-Owner"
+      });
+
+      if (group_id) {
+        const groupUsers = await GroupUser.find({
+          group_id,
+          role: "Co-Owner"
+        });
+
+        const groupUserIds = groupUsers.map((groupUser) => groupUser.user_id);
+
+        await PresentationUser.insertMany(
+          groupUserIds.map((groupUserId) => ({
+            user_id: groupUserId,
+            presentation_id: presentation._id,
+            role: "Co-Owner"
+          }))
+        );
+      }
+    }
+
     presentation.title = title;
+    presentation.group_id = group_id;
+
     await presentation.save();
 
     res.json({
