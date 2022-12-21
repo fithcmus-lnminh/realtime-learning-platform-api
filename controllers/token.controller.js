@@ -97,6 +97,7 @@ exports.resetPassword = async (req, res) => {
       user.token = null;
 
       await user.save();
+      await resetPasswordToken.remove();
 
       res.json({
         code: API_CODE_SUCCESS,
@@ -157,11 +158,22 @@ exports.acceptCollaborator = async (req, res) => {
         data: null
       });
 
-    await PresentationUser.create({
-      user_id: user._id,
-      presentation_id: collaboratorToken.presentation_id,
-      role: "Collaborator"
-    });
+    await PresentationUser.findOneAndUpdate(
+      {
+        user_id: user._id,
+        presentation_id: collaboratorToken.presentation_id
+      },
+      {
+        role: "Collaborator"
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    await collaboratorToken.remove();
 
     res.json({
       code: API_CODE_SUCCESS,

@@ -43,7 +43,7 @@ exports.isPresentationUserExist = async (req, res, next) => {
     });
 
     if (!presentationUser) {
-      res.json({
+      res.status(403).json({
         code: API_CODE_PERMISSION_DENIED,
         message: "You are not the member of this presentation",
         data: null
