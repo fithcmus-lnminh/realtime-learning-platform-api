@@ -133,6 +133,7 @@ exports.getPresentations = async (req, res) => {
             {
               $project: {
                 owner: {
+                  _id: "$user._id",
                   email: "$user.email",
                   first_name: "$user.first_name",
                   last_name: "$user.last_name"
@@ -141,6 +142,7 @@ exports.getPresentations = async (req, res) => {
                 title: 1,
                 access_code: 1,
                 group: {
+                  _id: 1,
                   name: 1,
                   description: 1
                 },
