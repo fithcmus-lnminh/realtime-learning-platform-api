@@ -4,6 +4,7 @@ const Anonymous = require("../models/anonymous.model");
 const User = require("../models/user.model");
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
+const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 const { Presentations } = require("../utils/presentations");
@@ -55,14 +56,25 @@ io.of("/presentation")
       const { access_code } = data;
 
       const presentation = await Presentation.findOne({
-        access_code,
-        user_id: user.id
+        access_code
       });
 
       if (!presentation) {
         return callback({
           code: SOCKET_CODE_FAIL,
           message: "Presentation not found"
+        });
+      }
+
+      const presentationUser = await PresentationUser.findOne({
+        presentation_id: presentation._id,
+        user_id: user.id
+      });
+
+      if (!presentationUser) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not a member of this presentation"
         });
       }
 
