@@ -18,6 +18,6 @@ router.post("/", createCollaborator);
 router.use(isPresentationMemberExists);
 
 router.put("/", updateCollaborator);
-router.delete("/", deleteCollaborator);
+router.put("/delete", deleteCollaborator);
 
 module.exports = router;
