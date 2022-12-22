@@ -1,6 +1,8 @@
 const Group = require("../models/group.model");
 const GroupUser = require("../models/groupUser.model");
 const User = require("../models/user.model");
+const PresentationUser = require("../models/presentationUser.model");
+const Presentation = require("../models/presentation.model");
 const jwt = require("jsonwebtoken");
 const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 const sendMail = require("../utils/mailer");
@@ -12,7 +14,7 @@ exports.getGroup = async (req, res) => {
     const group = await Group.findOne({ _id: group_id });
     const owner = await GroupUser.findOne({
       group_id,
-      role: "Owner",
+      role: "Owner"
     }).populate("user_id");
     const totalMembers = await GroupUser.countDocuments({ group_id });
     let isJoined = null;
@@ -36,7 +38,7 @@ exports.getGroup = async (req, res) => {
     if (user_id)
       isJoined = (await GroupUser.exists({
         group_id,
-        user_id,
+        user_id
       }))
         ? true
         : false;
@@ -49,17 +51,17 @@ exports.getGroup = async (req, res) => {
         owner: {
           first_name: owner.user_id.first_name,
           last_name: owner.user_id.last_name,
-          email: owner.user_id.email,
+          email: owner.user_id.email
         },
         total_members: totalMembers,
-        is_joined: isJoined,
-      },
+        is_joined: isJoined
+      }
     });
   } catch (err) {
     return res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -74,41 +76,41 @@ exports.getGroups = async (req, res) => {
           user_id: req.user._id,
           role: role
             ? { $in: Array.isArray(role) ? role : [role] }
-            : { $ne: null },
-        },
+            : { $ne: null }
+        }
       },
       {
         $lookup: {
           from: "groupusers",
           localField: "group_id",
           foreignField: "group_id",
-          as: "group_users",
-        },
+          as: "group_users"
+        }
       },
       {
         $project: {
           _id: 0,
           role: 1,
           group_id: 1,
-          total_users: { $size: "$group_users" },
-        },
+          total_users: { $size: "$group_users" }
+        }
       },
       {
-        $skip: (page - 1) * limit,
+        $skip: (page - 1) * limit
       },
       {
-        $limit: limit * 1,
-      },
+        $limit: limit * 1
+      }
     ]);
 
     await GroupUser.populate(groups, {
       path: "group_id",
-      select: { _id: 1, name: 1, maximum_members: 1, description: 1 },
+      select: { _id: 1, name: 1, maximum_members: 1, description: 1 }
     });
 
     const totalGroups = await GroupUser.countDocuments({
       user_id: req.user._id,
-      role: role ? { $in: Array.isArray(role) ? role : [role] } : { $ne: null },
+      role: role ? { $in: Array.isArray(role) ? role : [role] } : { $ne: null }
     });
 
     const totalPages = Math.ceil(totalGroups / limit);
@@ -119,14 +121,14 @@ exports.getGroups = async (req, res) => {
       data: {
         groups,
         total_groups: totalGroups,
-        total_pages: totalPages,
-      },
+        total_pages: totalPages
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -139,7 +141,7 @@ exports.createGroup = async (req, res) => {
     const groupUser = await GroupUser.create({
       group_id: group._id,
       user_id: req.user._id,
-      role: "Owner",
+      role: "Owner"
     });
 
     res.json({
@@ -149,14 +151,14 @@ exports.createGroup = async (req, res) => {
         _id: group._id,
         name: group.name,
         maximum_members: group.maximum_members,
-        role: groupUser.role,
-      },
+        role: groupUser.role
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -179,14 +181,14 @@ exports.updateGroup = async (req, res) => {
         _id: group._id,
         name: group.name,
         description: group.description,
-        maximum_members: group.maximum_members,
-      },
+        maximum_members: group.maximum_members
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: error.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -195,19 +197,41 @@ exports.deleteGroup = async (req, res) => {
   const { group_id } = req.params;
 
   try {
-    await Group.findByIdAndDelete(group_id);
+    await Group.deleteOne({ group_id });
     await GroupUser.deleteMany({ group_id });
+
+    const presentations = await Presentation.find({ group_id });
+
+    const presentationIds = presentations.map((presentation) => {
+      return presentation._id;
+    });
+
+    await Presentation.updateMany(
+      {
+        _id: { $in: presentationIds }
+      },
+      {
+        $set: {
+          group_id: null
+        }
+      }
+    );
+
+    await PresentationUser.deleteMany({
+      presentation_id: { $in: presentationIds },
+      role: "Co-Owner"
+    });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -233,13 +257,13 @@ exports.inviteUser = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -252,7 +276,7 @@ exports.joinGroup = async (req, res) => {
     const groupUser = await GroupUser.create({
       group_id,
       user_id: user._id,
-      role: "Member",
+      role: "Member"
     });
 
     res.json({
@@ -260,14 +284,14 @@ exports.joinGroup = async (req, res) => {
       message: "Success",
       data: {
         _id: groupUser._id,
-        role: groupUser.role,
-      },
+        role: groupUser.role
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -277,21 +301,34 @@ exports.leaveGroup = async (req, res, next) => {
   const { user } = req;
 
   try {
-    await GroupUser.deleteOne({
+    const groupUser = await GroupUser.findOneAndDelete({
       group_id,
-      user_id: user._id,
+      user_id: user._id
     });
+
+    if (groupUser.role === "Co-Owner") {
+      const presentations = await Presentation.find({ group_id });
+
+      const presentationIds = presentations.map((presentation) => {
+        return presentation._id;
+      });
+
+      await PresentationUser.deleteMany({
+        presentation_id: { $in: presentationIds },
+        role: "Co-Owner"
+      });
+    }
 
     res.json({
       code: 0,
       message: "Leave group successfully",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -302,19 +339,19 @@ exports.kickUser = async (req, res) => {
   try {
     await GroupUser.deleteOne({
       group_id: member.group_id,
-      user_id: member.user_id,
+      user_id: member.user_id
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -324,24 +361,82 @@ exports.promoteUser = async (req, res) => {
   const { role } = req.body;
 
   try {
-    const groupUser = await GroupUser.findOneAndUpdate(
-      { group_id: member.group_id, user_id: member.user_id },
-      { role },
-      { new: true }
-    );
+    if (role != member.role) {
+      if (role == "Co-Owner") {
+        const presentations = await Presentation.find({
+          group_id: member.group_id
+        });
+
+        const presentationIds = presentations.map((presentation) => {
+          return presentation._id;
+        });
+
+        const presentationUsers = await PresentationUser.find({
+          presentation_id: { $in: presentationIds },
+          user_id: member.user_id,
+          role: "Collaborator"
+        });
+
+        const presentationCollaboratorIds = presentationUsers.map(
+          (presentationUser) => {
+            return presentationUser.presentation_id;
+          }
+        );
+
+        const presentationCoOwnerIds = presentationIds.filter(
+          (presentationId) => {
+            return !presentationCollaboratorIds.includes(
+              presentationCollaboratorIds.find((presentationCollaboratorId) => {
+                return (
+                  presentationCollaboratorId.toString() ==
+                  presentationId.toString()
+                );
+              })
+            );
+          }
+        );
+
+        await PresentationUser.insertMany(
+          presentationCoOwnerIds.map((presentation_id) => {
+            return {
+              presentation_id,
+              user_id: member.user_id,
+              role: "Co-Owner"
+            };
+          })
+        );
+      } else if (role == "Member") {
+        const presentations = await Presentation.find({
+          group_id: member.group_id
+        });
+
+        const presentationIds = presentations.map((presentation) => {
+          return presentation._id;
+        });
+
+        await PresentationUser.deleteMany({
+          presentation_id: { $in: presentationIds },
+          user_id: member.user_id,
+          role: "Co-Owner"
+        });
+      }
+    }
+
+    member.role = role;
+    await member.save();
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        role: groupUser.role,
-      },
+        role
+      }
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };

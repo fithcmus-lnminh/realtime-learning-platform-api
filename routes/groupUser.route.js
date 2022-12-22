@@ -1,6 +1,6 @@
 const express = require("express");
 const { getGroupUsers } = require("../controllers/groupUser.controller");
-const { isInGroup, isGroupOwner } = require("../middlewares/group");
+const { isInGroup } = require("../middlewares/group");
 
 const router = express.Router({ mergeParams: true });
 

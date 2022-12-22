@@ -1,9 +1,12 @@
 const ResetPasswordToken = require("../models/resetPasswordToken.model");
+const CollaboratorToken = require("../models/collaboratorToken.model");
+const PresentationUser = require("../models/presentationUser.model");
 const {
   API_CODE_SUCCESS,
   API_CODE_NOTFOUND,
   API_CODE_PERMISSION_DENIED,
   API_CODE_BY_SERVER,
+  API_CODE_VALIDATION_ERROR
 } = require("../constants");
 const sendMail = require("../utils/mailer");
 const User = require("../models/user.model");
@@ -20,20 +23,20 @@ exports.createResetPasswordToken = async (req, res) => {
       return res.json({
         code: API_CODE_PERMISSION_DENIED,
         message: "You can't reset password with this email",
-        data: null,
+        data: null
       });
 
     const resetPasswordToken = await ResetPasswordToken.findOneAndUpdate(
       {
-        user_id: user._id,
+        user_id: user._id
       },
       {
-        token: v4(),
+        token: v4()
       },
       {
         upsert: true,
         new: true,
-        setDefaultsOnInsert: true,
+        setDefaultsOnInsert: true
       }
     );
 
@@ -53,14 +56,14 @@ exports.createResetPasswordToken = async (req, res) => {
       res.json({
         code: API_CODE_SUCCESS,
         message: "Success",
-        data: null,
+        data: null
       });
     }
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -71,7 +74,7 @@ exports.resetPassword = async (req, res) => {
 
   try {
     const resetPasswordToken = await ResetPasswordToken.findOne({
-      token: token_id,
+      token: token_id
     });
 
     if (resetPasswordToken) {
@@ -84,7 +87,7 @@ exports.resetPassword = async (req, res) => {
         return res.json({
           code: API_CODE_VALIDATION_ERROR,
           message: "Token is expired",
-          data: null,
+          data: null
         });
       }
 
@@ -94,23 +97,96 @@ exports.resetPassword = async (req, res) => {
       user.token = null;
 
       await user.save();
+      await resetPasswordToken.remove();
 
       res.json({
         code: API_CODE_SUCCESS,
         message: "Success",
-        data: null,
+        data: null
       });
     } else
       res.json({
         code: API_CODE_NOTFOUND,
         message: "Token is not found",
-        data: null,
+        data: null
       });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
+    });
+  }
+};
+
+exports.acceptCollaborator = async (req, res) => {
+  const { token_id } = req.params;
+
+  try {
+    const collaboratorToken = await CollaboratorToken.findOne({
+      token: token_id
+    });
+
+    if (!collaboratorToken)
+      return res.json({
+        code: API_CODE_NOTFOUND,
+        message: "Token is not found",
+        data: null
+      });
+
+    const updatedAt = collaboratorToken.updatedAt;
+    const now = new Date();
+    const diff = now.getTime() - updatedAt.getTime();
+    const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+    if (diffDays > 1) {
+      return res.json({
+        code: API_CODE_VALIDATION_ERROR,
+        message: "Token is expired",
+        data: null
+      });
+    }
+
+    const user = await User.findOne({
+      email: collaboratorToken.email
+    });
+
+    if (!user)
+      return res.json({
+        code: API_CODE_NOTFOUND,
+        message: "User is not found",
+        data: null
+      });
+
+    await PresentationUser.findOneAndUpdate(
+      {
+        user_id: user._id,
+        presentation_id: collaboratorToken.presentation_id
+      },
+      {
+        role: "Collaborator"
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    await collaboratorToken.remove();
+
+    res.json({
+      code: API_CODE_SUCCESS,
+      message: "Success",
+      data: {
+        presentation_id: collaboratorToken.presentation_id
+      }
+    });
+  } catch (err) {
+    res.json({
+      code: API_CODE_BY_SERVER,
+      message: err.message,
+      data: null
     });
   }
 };
