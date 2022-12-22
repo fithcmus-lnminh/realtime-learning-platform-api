@@ -9,13 +9,12 @@ const PresentationUser = require("../models/presentationUser.model");
 const GroupUser = require("../models/groupUser.model");
 
 exports.getPresentation = async (req, res) => {
-  const { user, presentationUser } = req;
+  const { presentationUser } = req;
   const { presentation_id } = req.params;
 
   try {
     const presentation = await Presentation.findOne({
-      _id: presentation_id,
-      user_id: user._id
+      _id: presentation_id
     })
       .populate({
         path: "slides.slide_id"
