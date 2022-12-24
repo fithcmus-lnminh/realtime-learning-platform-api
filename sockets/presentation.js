@@ -46,14 +46,12 @@ exports.registerPresentationHandler = (io, socket) => {
         total_users: viewers.getTotalUsers(access_code)
       });
 
+      if (presentations.getPresentation(access_code))
+        socket.emit("start-presentation");
+
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Teacher joined presentation",
-        data: {
-          is_presented: presentations.getPresentation(access_code)
-            ? true
-            : false
-        }
+        message: "Teacher joined presentation"
       });
     } catch (err) {
       callback({

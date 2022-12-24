@@ -25,16 +25,20 @@ exports.registerGroupHandler = async (io, socket) => {
 
       const presentation = presentations.getPresentationByGroup(group_id);
 
+      if (presentation) {
+        socket.emit("start-presentation", {
+          message: `Presentation "${presentation.title}" is started`,
+          data: {
+            presentation_id: presentation._id,
+            title: presentation.title,
+            access_code: presentation.access_code
+          }
+        });
+      }
+
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Join group successfully",
-        data: presentation
-          ? {
-              presentation_id: presentation._id,
-              title: presentation.title,
-              access_code: presentation.access_code
-            }
-          : null
+        message: "Join group successfully"
       });
     } catch (err) {
       callback({
