@@ -1,7 +1,4 @@
 const { Server } = require("socket.io");
-const jwt = require("jsonwebtoken");
-const Anonymous = require("../models/anonymous.model");
-const User = require("../models/user.model");
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
 const PresentationUser = require("../models/presentationUser.model");
@@ -9,6 +6,7 @@ const Option = require("../models/option.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 const { Presentations } = require("../utils/presentations");
 const { Viewers } = require("../utils/viewers");
+const { validate } = require("./auth");
 
 const io = new Server({
   cors: {
@@ -20,35 +18,7 @@ const presentations = new Presentations();
 const viewers = new Viewers();
 
 io.of("/presentation")
-  .use(async (socket, next) => {
-    try {
-      const { token } = socket.handshake.headers;
-
-      if (!token) {
-        return next(new Error("Missing token"));
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      if (!decoded) {
-        return next(new Error("Invalid token"));
-      }
-
-      socket.user = decoded;
-
-      if (
-        (socket.user.role === "Anonymous" &&
-          !(await Anonymous.findById(socket.user.id))) ||
-        (socket.user.role === "User" && !(await User.findById(socket.user.id)))
-      ) {
-        return next(new Error("User not found"));
-      }
-
-      next();
-    } catch (err) {
-      return new Error(err.message);
-    }
-  })
+  .use(validate)
   .on("connection", (socket) => {
     const { user } = socket;
 
@@ -89,7 +59,12 @@ io.of("/presentation")
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Teacher joined presentation"
+        message: "Teacher joined presentation",
+        data: {
+          is_presented: presentations.getPresentation(access_code)
+            ? true
+            : false
+        }
       });
     });
 
@@ -122,6 +97,13 @@ io.of("/presentation")
         return callback({
           code: SOCKET_CODE_FAIL,
           message: "Invalid current slide"
+        });
+      }
+
+      if (presentations.getPresentation(access_code)) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation is already presented"
         });
       }
 
@@ -167,6 +149,8 @@ io.of("/presentation")
         current_slide: current_slide,
         total_slides: presentation.slides.length
       });
+
+      socket.to(access_code).emit("start-presentation");
 
       callback({
         code: SOCKET_CODE_SUCCESS,
@@ -225,6 +209,31 @@ io.of("/presentation")
       socket.emit("get-total-students", {
         total_users: viewers.getTotalUsers(access_code)
       });
+
+      const currentPresentation = presentations.getPresentation(access_code);
+
+      if (currentPresentation) {
+        socket.emit("get-slide", {
+          slide: {
+            ...currentPresentation.slides[
+              currentPresentation.current_slide - 1
+            ],
+            content: {
+              ...currentPresentation.slides[
+                currentPresentation.current_slide - 1
+              ].content,
+              options: currentPresentation.slides[
+                currentPresentation.current_slide - 1
+              ].content?.options?.map((option) => ({
+                ...option,
+                numUpvote: option.upvotes.length
+              }))
+            }
+          },
+          current_slide: currentPresentation.current_slide,
+          total_slides: currentPresentation.slides.length
+        });
+      }
 
       callback({
         code: SOCKET_CODE_SUCCESS,
