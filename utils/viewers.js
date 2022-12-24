@@ -7,7 +7,7 @@ class Viewers {
     this.viewers.push({
       access_code,
       id,
-      type,
+      type
     });
   }
 
@@ -32,4 +32,4 @@ class Viewers {
   }
 }
 
-module.exports = { Viewers };
+module.exports = new Viewers();

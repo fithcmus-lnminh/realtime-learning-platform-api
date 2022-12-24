@@ -3,11 +3,9 @@ const Presentation = require("../models/presentation.model");
 const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
-const { Presentations } = require("../utils/presentations");
-const { Viewers } = require("../utils/viewers");
 
-const presentations = new Presentations();
-const viewers = new Viewers();
+const presentations = require("../utils/presentations");
+const viewers = require("../utils/viewers");
 
 exports.registerPresentationHandler = (io, socket) => {
   const { user } = socket;
@@ -103,9 +101,12 @@ exports.registerPresentationHandler = (io, socket) => {
     });
 
     presentations.addPresentation({
+      _id: presentation._id,
+      title: presentation.title,
       access_code,
       slides: presentation.slides,
-      current_slide: parseInt(current_slide)
+      current_slide: parseInt(current_slide),
+      group_id: presentation.group_id
     });
 
     socket.to(access_code).emit("get-slide", {
@@ -141,8 +142,6 @@ exports.registerPresentationHandler = (io, socket) => {
     socket.to(access_code).emit("start-presentation");
 
     if (presentation.group_id) {
-      console.log(presentation.group_id.toString());
-
       io.of("/notification")
         .to(presentation.group_id.toString())
         .emit("new-notification", {
@@ -150,6 +149,18 @@ exports.registerPresentationHandler = (io, socket) => {
           data: {
             type: "presentation",
             presentation_id: presentation._id,
+            title: presentation.title,
+            access_code: presentation.access_code
+          }
+        });
+
+      io.of("/group")
+        .to(presentation.group_id.toString())
+        .emit("start-presentation", {
+          message: `Presentation "${presentation.title}" is started`,
+          data: {
+            presentation_id: presentation._id,
+            title: presentation.title,
             access_code: presentation.access_code
           }
         });
@@ -369,6 +380,14 @@ exports.registerPresentationHandler = (io, socket) => {
       });
     }
 
+    const presentation = presentations.getPresentation(access_code);
+
+    if (presentation.group_id) {
+      io.of("/group")
+        .to(presentation.group_id.toString())
+        .emit("end-presentation");
+    }
+
     presentations.removePresentation(access_code);
 
     socket.to(access_code).emit("end-presentation");
@@ -533,6 +552,14 @@ exports.registerPresentationHandler = (io, socket) => {
     }
 
     if (user.is_teacher) {
+      const presentation = presentations.getPresentation(access_code);
+
+      if (presentation.group_id) {
+        io.of("/group")
+          .to(presentation.group_id.toString())
+          .emit("end-presentation");
+      }
+
       presentations.removePresentation(access_code);
     }
   });

@@ -1,5 +1,4 @@
 const GroupUser = require("../models/groupUser.model");
-const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 
 exports.registerNotificationHandler = async (io, socket) => {
   const user = socket.user;
