@@ -13,243 +13,269 @@ exports.registerPresentationHandler = (io, socket) => {
   socket.on("teacher-join-presentation", async (data, callback) => {
     const { access_code } = data;
 
-    const presentation = await Presentation.findOne({
-      access_code
-    });
-
-    if (!presentation) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Presentation not found"
+    try {
+      const presentation = await Presentation.findOne({
+        access_code
       });
-    }
 
-    const presentationUser = await PresentationUser.findOne({
-      presentation_id: presentation._id,
-      user_id: user.id
-    });
-
-    if (!presentationUser) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User is not a member of this presentation"
-      });
-    }
-
-    user.access_code = access_code;
-    user.is_teacher = true;
-
-    socket.join(access_code);
-
-    socket.emit("get-total-students", {
-      total_users: viewers.getTotalUsers(access_code)
-    });
-
-    callback({
-      code: SOCKET_CODE_SUCCESS,
-      message: "Teacher joined presentation",
-      data: {
-        is_presented: presentations.getPresentation(access_code) ? true : false
+      if (!presentation) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation not found"
+        });
       }
-    });
+
+      const presentationUser = await PresentationUser.findOne({
+        presentation_id: presentation._id,
+        user_id: user.id
+      });
+
+      if (!presentationUser) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not a member of this presentation"
+        });
+      }
+
+      user.access_code = access_code;
+      user.is_teacher = true;
+
+      socket.join(access_code);
+
+      socket.emit("get-total-students", {
+        total_users: viewers.getTotalUsers(access_code)
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Teacher joined presentation",
+        data: {
+          is_presented: presentations.getPresentation(access_code)
+            ? true
+            : false
+        }
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
   });
 
   socket.on("teacher-start-presentation", async (data, callback) => {
     const { current_slide } = data;
     const { is_teacher, access_code } = user;
 
-    if (!is_teacher) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User is not a teacher"
-      });
-    }
-
-    const presentation = await Presentation.findOne({
-      access_code,
-      user_id: user.id
-    })
-      .populate("slides.slide_id")
-      .lean({ autopopulate: true });
-
-    if (!presentation) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Presentation not found"
-      });
-    }
-
-    if (current_slide > presentation.slides.length || current_slide < 1) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Invalid current slide"
-      });
-    }
-
-    if (presentations.getPresentation(access_code)) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Presentation is already presented"
-      });
-    }
-
-    presentation.slides = presentation.slides.map((slide) => {
-      return {
-        slide_type: slide.slide_type,
-        content: slide.slide_id
-      };
-    });
-
-    presentations.addPresentation({
-      _id: presentation._id,
-      title: presentation.title,
-      access_code,
-      slides: presentation.slides,
-      current_slide: parseInt(current_slide),
-      group_id: presentation.group_id
-    });
-
-    socket.to(access_code).emit("get-slide", {
-      slide: {
-        ...presentation.slides[0],
-        content: {
-          ...presentation.slides[0].content,
-          options: presentation.slides[0].content?.options?.map((option) => ({
-            ...option,
-            numUpvote: option.upvotes.length
-          }))
-        }
-      },
-      current_slide: current_slide,
-      total_slides: presentation.slides.length
-    });
-
-    socket.emit("get-slide", {
-      slide: {
-        ...presentation.slides[0],
-        content: {
-          ...presentation.slides[0].content,
-          options: presentation.slides[0].content?.options?.map((option) => ({
-            ...option,
-            numUpvote: option.upvotes.length
-          }))
-        }
-      },
-      current_slide: current_slide,
-      total_slides: presentation.slides.length
-    });
-
-    socket.to(access_code).emit("start-presentation");
-
-    if (presentation.group_id) {
-      io.of("/notification")
-        .to(presentation.group_id.toString())
-        .emit("new-notification", {
-          message: `Presentation "${presentation.title}" is started`,
-          data: {
-            type: "presentation",
-            presentation_id: presentation._id,
-            title: presentation.title,
-            access_code: presentation.access_code
-          }
+    try {
+      if (!is_teacher) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not a teacher"
         });
+      }
 
-      io.of("/group")
-        .to(presentation.group_id.toString())
-        .emit("start-presentation", {
-          message: `Presentation "${presentation.title}" is started`,
-          data: {
-            presentation_id: presentation._id,
-            title: presentation.title,
-            access_code: presentation.access_code
-          }
+      const presentation = await Presentation.findOne({
+        access_code,
+        user_id: user.id
+      })
+        .populate("slides.slide_id")
+        .lean({ autopopulate: true });
+
+      if (!presentation) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation not found"
         });
-    }
+      }
 
-    callback({
-      code: SOCKET_CODE_SUCCESS,
-      message: "Presentation started"
-    });
-  });
+      if (current_slide > presentation.slides.length || current_slide < 1) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Invalid current slide"
+        });
+      }
 
-  socket.on("student-join-presentation", async (data, callback) => {
-    const { access_code } = data;
+      if (presentations.getPresentation(access_code)) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation is already presented"
+        });
+      }
 
-    if (user.access_code) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User already joined presentation"
+      presentation.slides = presentation.slides.map((slide) => {
+        return {
+          slide_type: slide.slide_type,
+          content: slide.slide_id
+        };
       });
-    }
 
-    const presentation = await Presentation.findOne({
-      access_code
-    });
-
-    if (!presentation) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Presentation not found"
-      });
-    }
-
-    if (
-      presentation.group_id &&
-      !(await GroupUser.findOne({
-        user_id: user.id,
+      presentations.addPresentation({
+        _id: presentation._id,
+        title: presentation.title,
+        access_code,
+        slides: presentation.slides,
+        current_slide: parseInt(current_slide),
         group_id: presentation.group_id
-      }))
-    ) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User not in group"
       });
-    }
 
-    viewers.addViewer({
-      access_code,
-      id: user.id,
-      type: user.type
-    });
-
-    user.access_code = access_code;
-
-    socket.join(access_code);
-
-    socket.to(access_code).emit("get-total-students", {
-      total_users: viewers.getTotalUsers(access_code)
-    });
-
-    socket.emit("get-total-students", {
-      total_users: viewers.getTotalUsers(access_code)
-    });
-
-    const currentPresentation = presentations.getPresentation(access_code);
-
-    if (currentPresentation) {
-      socket.emit("get-slide", {
+      socket.to(access_code).emit("get-slide", {
         slide: {
-          ...currentPresentation.slides[currentPresentation.current_slide - 1],
+          ...presentation.slides[0],
           content: {
-            ...currentPresentation.slides[currentPresentation.current_slide - 1]
-              .content,
-            options: currentPresentation.slides[
-              currentPresentation.current_slide - 1
-            ].content?.options?.map((option) => ({
+            ...presentation.slides[0].content,
+            options: presentation.slides[0].content?.options?.map((option) => ({
               ...option,
               numUpvote: option.upvotes.length
             }))
           }
         },
-        current_slide: currentPresentation.current_slide,
-        total_slides: currentPresentation.slides.length
+        current_slide: current_slide,
+        total_slides: presentation.slides.length
+      });
+
+      socket.emit("get-slide", {
+        slide: {
+          ...presentation.slides[0],
+          content: {
+            ...presentation.slides[0].content,
+            options: presentation.slides[0].content?.options?.map((option) => ({
+              ...option,
+              numUpvote: option.upvotes.length
+            }))
+          }
+        },
+        current_slide: current_slide,
+        total_slides: presentation.slides.length
+      });
+
+      socket.to(access_code).emit("start-presentation");
+
+      if (presentation.group_id) {
+        io.of("/notification")
+          .to(presentation.group_id.toString())
+          .emit("new-notification", {
+            message: `Presentation "${presentation.title}" is started`,
+            data: {
+              type: "presentation",
+              presentation_id: presentation._id,
+              title: presentation.title,
+              access_code: presentation.access_code
+            }
+          });
+
+        io.of("/group")
+          .to(presentation.group_id.toString())
+          .emit("start-presentation", {
+            message: `Presentation "${presentation.title}" is started`,
+            data: {
+              presentation_id: presentation._id,
+              title: presentation.title,
+              access_code: presentation.access_code
+            }
+          });
+      }
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Presentation started"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
       });
     }
+  });
 
-    callback({
-      code: SOCKET_CODE_SUCCESS,
-      message: "Student joined presentation"
-    });
+  socket.on("student-join-presentation", async (data, callback) => {
+    const { access_code } = data;
+
+    try {
+      if (user.access_code) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User already joined presentation"
+        });
+      }
+
+      const presentation = await Presentation.findOne({
+        access_code
+      });
+
+      if (!presentation) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation not found"
+        });
+      }
+
+      if (
+        presentation.group_id &&
+        !(await GroupUser.findOne({
+          user_id: user.id,
+          group_id: presentation.group_id
+        }))
+      ) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User not in group"
+        });
+      }
+
+      viewers.addViewer({
+        access_code,
+        id: user.id,
+        type: user.type
+      });
+
+      user.access_code = access_code;
+
+      socket.join(access_code);
+
+      socket.to(access_code).emit("get-total-students", {
+        total_users: viewers.getTotalUsers(access_code)
+      });
+
+      socket.emit("get-total-students", {
+        total_users: viewers.getTotalUsers(access_code)
+      });
+
+      const currentPresentation = presentations.getPresentation(access_code);
+
+      if (currentPresentation) {
+        socket.emit("get-slide", {
+          slide: {
+            ...currentPresentation.slides[
+              currentPresentation.current_slide - 1
+            ],
+            content: {
+              ...currentPresentation.slides[
+                currentPresentation.current_slide - 1
+              ].content,
+              options: currentPresentation.slides[
+                currentPresentation.current_slide - 1
+              ].content?.options?.map((option) => ({
+                ...option,
+                numUpvote: option.upvotes.length
+              }))
+            }
+          },
+          current_slide: currentPresentation.current_slide,
+          total_slides: currentPresentation.slides.length
+        });
+      }
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Student joined presentation"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
   });
 
   socket.on("teacher-next-slide", async (data, callback) => {
@@ -402,87 +428,94 @@ exports.registerPresentationHandler = (io, socket) => {
     const { option_id } = data;
     const { access_code } = user;
 
-    if (!access_code) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User is not in presentation"
-      });
-    }
+    try {
+      if (!access_code) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not in presentation"
+        });
+      }
 
-    const presentation = presentations.getPresentation(access_code);
+      const presentation = presentations.getPresentation(access_code);
 
-    if (!presentation) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Presentation not found"
-      });
-    }
+      if (!presentation) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Presentation not found"
+        });
+      }
 
-    const slide = presentation.slides[presentation.current_slide - 1];
+      const slide = presentation.slides[presentation.current_slide - 1];
 
-    if (slide.slide_type !== "MultipleChoice") {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Slide is not multiple choice"
-      });
-    }
+      if (slide.slide_type !== "MultipleChoice") {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Slide is not multiple choice"
+        });
+      }
 
-    const option = slide.content.options.find(
-      (option) => option._id == option_id
-    );
-
-    if (!option) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "Option not found"
-      });
-    }
-
-    const voter = slide.content.options.find((option) => {
-      return option.upvotes.find(
-        (upvote) => upvote.user_id == user.id && upvote.user_type == user.type
+      const option = slide.content.options.find(
+        (option) => option._id == option_id
       );
-    });
 
-    if (voter) {
-      return callback({
+      if (!option) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "Option not found"
+        });
+      }
+
+      const voter = slide.content.options.find((option) => {
+        return option.upvotes.find(
+          (upvote) => upvote.user_id == user.id && upvote.user_type == user.type
+        );
+      });
+
+      if (voter) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User already voted"
+        });
+      }
+
+      const optionInDb = await Option.findById(option_id);
+
+      optionInDb.upvotes.push({
+        user_id: user.id,
+        user_type: user.type
+      });
+
+      await optionInDb.save();
+
+      option.upvotes.push({
+        user_id: user.id,
+        user_type: user.type
+      });
+
+      socket.to(access_code).emit("get-score", {
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length
+        }))
+      });
+
+      socket.emit("get-score", {
+        options: slide.content.options.map((option) => ({
+          ...option,
+          numUpvote: option.upvotes.length
+        }))
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Option voted"
+      });
+    } catch (err) {
+      callback({
         code: SOCKET_CODE_FAIL,
-        message: "User already voted"
+        message: err.message
       });
     }
-
-    const optionInDb = await Option.findById(option_id);
-
-    optionInDb.upvotes.push({
-      user_id: user.id,
-      user_type: user.type
-    });
-
-    await optionInDb.save();
-
-    option.upvotes.push({
-      user_id: user.id,
-      user_type: user.type
-    });
-
-    socket.to(access_code).emit("get-score", {
-      options: slide.content.options.map((option) => ({
-        ...option,
-        numUpvote: option.upvotes.length
-      }))
-    });
-
-    socket.emit("get-score", {
-      options: slide.content.options.map((option) => ({
-        ...option,
-        numUpvote: option.upvotes.length
-      }))
-    });
-
-    callback({
-      code: SOCKET_CODE_SUCCESS,
-      message: "Option voted"
-    });
   });
 
   socket.on("student-check-vote", async (data, callback) => {
