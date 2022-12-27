@@ -18,6 +18,7 @@ const multipleChoiceRouter = require("./multipleChoice.route");
 const headingRouter = require("./heading.route");
 const paragraphRouter = require("./paragraph.route");
 const presentationUserRouter = require("./collaborator.route");
+const presentationGroupRouter = require("./presentationGroup.route");
 
 const router = express.Router();
 
@@ -38,5 +39,9 @@ router.use("/:presentation_id/multiple-choice", multipleChoiceRouter);
 router.use("/:presentation_id/heading", headingRouter);
 router.use("/:presentation_id/paragraph", paragraphRouter);
 router.use("/:presentation_id/collaborator", presentationUserRouter);
-
+router.use(
+  "/:presentation_id/group",
+  isPresentationOwner,
+  presentationGroupRouter
+);
 module.exports = router;

@@ -65,7 +65,7 @@ exports.getPresentation = async (req, res) => {
 
 exports.getPresentations = async (req, res) => {
   const { user } = req;
-  const { group_id, page = 1, limit = 10, role } = req.query;
+  const { page = 1, limit = 10, role } = req.query;
 
   try {
     const presentationUsers = await PresentationUser.find({
@@ -184,7 +184,7 @@ exports.getPresentations = async (req, res) => {
 };
 
 exports.createPresentation = async (req, res) => {
-  const { title, group_id } = req.body;
+  const { title } = req.body;
   const { user } = req;
 
   try {
@@ -213,8 +213,7 @@ exports.createPresentation = async (req, res) => {
     const presentation = await Presentation.create({
       title,
       access_code,
-      user_id: user._id,
-      group_id
+      user_id: user._id
     });
 
     await PresentationUser.create({
@@ -222,23 +221,6 @@ exports.createPresentation = async (req, res) => {
       presentation_id: presentation._id,
       role: "Owner"
     });
-
-    if (group_id) {
-      const GroupUsers = await GroupUser.find({
-        group_id,
-        role: "Co-Owner"
-      });
-
-      const groupUserIds = GroupUsers.map((groupUser) => groupUser.user_id);
-
-      await PresentationUser.insertMany(
-        groupUserIds.map((groupUserId) => ({
-          user_id: groupUserId,
-          presentation_id: presentation._id,
-          role: "Co-Owner"
-        }))
-      );
-    }
 
     res.json({
       code: API_CODE_SUCCESS,

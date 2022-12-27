@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const MultipleChoice = require("./multipleChoice.model.js");
 const PresentationUser = require("./presentationUser.model.js");
+const PresentationGroup = require("./presentationGroup.model.js");
+const Heading = require("./heading.model.js");
+const Paragraph = require("./paragraph.model.js");
 const CollaboratorToken = require("./collaboratorToken.model.js");
 
 const presentationSchema = mongoose.Schema(
@@ -31,10 +34,6 @@ const presentationSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
-    },
-    group_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group"
     }
   },
   {
@@ -53,6 +52,27 @@ presentationSchema.pre("remove", async function (next) {
         .filter((slide) => slide.slide_type === "MultipleChoice")
         .map((slide) => slide.slide_id)
     }
+  });
+
+  await Heading.deleteMany({
+    _id: {
+      $in: presentation.slides
+
+        .filter((slide) => slide.slide_type === "Heading")
+        .map((slide) => slide.slide_id)
+    }
+  });
+
+  await Paragraph.deleteMany({
+    _id: {
+      $in: presentation.slides
+        .filter((slide) => slide.slide_type === "Paragraph")
+        .map((slide) => slide.slide_id)
+    }
+  });
+
+  await PresentationGroup.deleteMany({
+    presentation_id: presentation._id
   });
 
   await PresentationUser.deleteMany({

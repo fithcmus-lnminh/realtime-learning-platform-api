@@ -2,6 +2,7 @@ const Group = require("../models/group.model");
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
 const PresentationUser = require("../models/presentationUser.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const {
   API_CODE_PERMISSION_DENIED,
   API_CODE_NOTFOUND,
@@ -116,5 +117,33 @@ exports.checkGroupIdInBody = async (req, res, next) => {
     }
   } else {
     next();
+  }
+};
+
+exports.isPresentationGroupExist = async (req, res, next) => {
+  const { presentation_id, group_id } = req.params;
+
+  try {
+    const presentationGroup = await PresentationGroup.findOne({
+      presentation_id,
+      group_id
+    });
+
+    if (!presentationGroup) {
+      res.json({
+        code: API_CODE_NOTFOUND,
+        message: "Presentation does not belong to this group",
+        data: null
+      });
+    } else {
+      req.presentationGroup = presentationGroup;
+      next();
+    }
+  } catch {
+    res.json({
+      code: API_CODE_BY_SERVER,
+      message: err.message,
+      data: null
+    });
   }
 };
