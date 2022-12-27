@@ -6,7 +6,6 @@ const {
   API_CODE_NOTFOUND
 } = require("../constants");
 const PresentationUser = require("../models/presentationUser.model");
-const GroupUser = require("../models/groupUser.model");
 
 exports.getPresentation = async (req, res) => {
   const { presentationUser } = req;
@@ -239,7 +238,7 @@ exports.createPresentation = async (req, res) => {
 };
 
 exports.updatePresentation = async (req, res) => {
-  const { title, group_id } = req.body;
+  const { title } = req.body;
   const { presentation } = req;
 
   try {
@@ -248,23 +247,6 @@ exports.updatePresentation = async (req, res) => {
         presentation_id: presentation._id,
         role: "Co-Owner"
       });
-
-      if (group_id) {
-        const groupUsers = await GroupUser.find({
-          group_id,
-          role: "Co-Owner"
-        });
-
-        const groupUserIds = groupUsers.map((groupUser) => groupUser.user_id);
-
-        await PresentationUser.insertMany(
-          groupUserIds.map((groupUserId) => ({
-            user_id: groupUserId,
-            presentation_id: presentation._id,
-            role: "Co-Owner"
-          }))
-        );
-      }
     }
 
     presentation.title = title;
