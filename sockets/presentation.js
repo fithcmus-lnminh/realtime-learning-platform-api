@@ -109,13 +109,19 @@ exports.registerPresentationHandler = (io, socket) => {
         };
       });
 
+      const presentationGroups = await PresentationGroup.find({
+        presentation_id: presentation._id
+      }).distinct("group_id");
+
+      const group_ids = presentationGroups.map((group) => group.toString());
+
       presentations.addPresentation({
         _id: presentation._id,
         title: presentation.title,
         access_code,
         slides: presentation.slides,
         current_slide: parseInt(current_slide),
-        group_id: presentation.group_id
+        group_ids
       });
 
       socket.to(access_code).emit("get-slide", {
@@ -162,9 +168,9 @@ exports.registerPresentationHandler = (io, socket) => {
           }
         });
 
-      if (presentation.group_id) {
+      group_ids.forEach((group_id) => {
         io.of("/group")
-          .to(presentation.group_id.toString())
+          .to(group_id)
           .emit("start-presentation", {
             message: `Presentation "${presentation.title}" is started`,
             data: {
@@ -173,7 +179,7 @@ exports.registerPresentationHandler = (io, socket) => {
               access_code: presentation.access_code
             }
           });
-      }
+      });
 
       callback({
         code: SOCKET_CODE_SUCCESS,
@@ -421,12 +427,11 @@ exports.registerPresentationHandler = (io, socket) => {
     }
 
     const presentation = presentations.getPresentation(access_code);
+    const { group_ids } = presentation;
 
-    if (presentation.group_id) {
-      io.of("/group")
-        .to(presentation.group_id.toString())
-        .emit("end-presentation");
-    }
+    group_ids.forEach((group_id) => {
+      io.of("/group").to(group_id).emit("end-presentation");
+    });
 
     presentations.removePresentation(access_code);
 
@@ -600,12 +605,11 @@ exports.registerPresentationHandler = (io, socket) => {
 
     if (user.is_teacher) {
       const presentation = presentations.getPresentation(access_code);
+      const { group_ids } = presentation;
 
-      if (presentation.group_id) {
-        io.of("/group")
-          .to(presentation.group_id.toString())
-          .emit("end-presentation");
-      }
+      group_ids.forEach((group_id) => {
+        io.of("/group").to(group_id).emit("end-presentation");
+      });
 
       presentations.removePresentation(access_code);
     }

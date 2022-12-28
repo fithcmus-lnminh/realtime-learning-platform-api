@@ -9,7 +9,7 @@ class Presentations {
     access_code,
     slides,
     current_slide,
-    group_id
+    group_ids
   }) {
     this.presentations.push({
       _id,
@@ -17,7 +17,7 @@ class Presentations {
       access_code,
       slides,
       current_slide,
-      group_id
+      group_ids
     });
   }
 
