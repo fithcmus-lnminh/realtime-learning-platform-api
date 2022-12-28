@@ -1,5 +1,6 @@
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
@@ -208,17 +209,32 @@ exports.registerPresentationHandler = (io, socket) => {
         });
       }
 
-      if (
-        presentation.group_id &&
-        !(await GroupUser.findOne({
-          user_id: user.id,
-          group_id: presentation.group_id
-        }))
-      ) {
-        return callback({
-          code: SOCKET_CODE_FAIL,
-          message: "User not in group"
+      if (!presentation.is_public) {
+        if (user.type == "Anonymous")
+          return callback({
+            code: SOCKET_CODE_FAIL,
+            message: "Presentation is not public"
+          });
+
+        const presentationGroups = await PresentationGroup.find({
+          presentation_id: presentation._id
         });
+
+        console.log(presentation);
+        console.log(presentationGroups);
+
+        if (
+          !(await GroupUser.exists({
+            user_id: user.id,
+            group_id: {
+              $in: presentationGroups.map((group) => group.group_id)
+            }
+          }))
+        )
+          return callback({
+            code: SOCKET_CODE_FAIL,
+            message: "User not in group"
+          });
       }
 
       viewers.addViewer({

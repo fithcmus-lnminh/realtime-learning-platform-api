@@ -183,7 +183,7 @@ exports.getPresentations = async (req, res) => {
 };
 
 exports.createPresentation = async (req, res) => {
-  const { title } = req.body;
+  const { title, is_public } = req.body;
   const { user } = req;
 
   try {
@@ -218,7 +218,8 @@ exports.createPresentation = async (req, res) => {
     await PresentationUser.create({
       user_id: user._id,
       presentation_id: presentation._id,
-      role: "Owner"
+      role: "Owner",
+      is_public
     });
 
     res.json({
@@ -238,11 +239,12 @@ exports.createPresentation = async (req, res) => {
 };
 
 exports.updatePresentation = async (req, res) => {
-  const { title } = req.body;
+  const { title, is_public } = req.body;
   const { presentation } = req;
 
   try {
     presentation.title = title;
+    presentation.is_public = is_public;
 
     await presentation.save();
 

@@ -30,6 +30,11 @@ const presentationSchema = mongoose.Schema(
       type: String,
       required: true
     },
+    is_public: {
+      type: Boolean,
+      required: true,
+      default: true
+    },
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
