@@ -1,11 +1,16 @@
 const generate = require("generate-password");
 const Presentation = require("../models/presentation.model");
+const GroupUser = require("../models/groupUser.model");
+const User = require("../models/user.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const {
   API_CODE_SUCCESS,
   API_CODE_BY_SERVER,
-  API_CODE_NOTFOUND
+  API_CODE_NOTFOUND,
+  API_CODE_PERMISSION_DENIED
 } = require("../constants");
 const PresentationUser = require("../models/presentationUser.model");
+const jwt = require("jsonwebtoken");
 
 exports.getPresentation = async (req, res) => {
   const { presentationUser } = req;
@@ -212,14 +217,14 @@ exports.createPresentation = async (req, res) => {
     const presentation = await Presentation.create({
       title,
       access_code,
-      user_id: user._id
+      user_id: user._id,
+      is_public
     });
 
     await PresentationUser.create({
       user_id: user._id,
       presentation_id: presentation._id,
-      role: "Owner",
-      is_public
+      role: "Owner"
     });
 
     res.json({
@@ -298,12 +303,54 @@ exports.CheckAccessCodeValid = async (req, res, next) => {
       });
     }
 
+    if (!presentation.is_public) {
+      let user_id = null;
+
+      if (req.user) {
+        user_id = req.user._id;
+      } else {
+        if (
+          req.headers.authorization &&
+          req.headers.authorization.startsWith("Bearer")
+        ) {
+          const token = req.headers.authorization.split(" ")[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          const user = await User.findById(decoded.id).select("-password");
+
+          if (user.token === token) user_id = user._id;
+        }
+      }
+
+      if (!user_id) {
+        return res.json({
+          code: API_CODE_PERMISSION_DENIED,
+          message: "This presentation is private, please login to access",
+          data: null
+        });
+      }
+
+      const groupUsers = await GroupUser.find({
+        user_id
+      });
+
+      if (
+        !(await PresentationGroup.exists({
+          presentation_id: presentation._id,
+          group_id: { $in: groupUsers.map((groupUser) => groupUser.group_id) }
+        }))
+      ) {
+        return res.json({
+          code: API_CODE_PERMISSION_DENIED,
+          message: "You don't have permission to access this presentation",
+          data: null
+        });
+      }
+    }
+
     return res.json({
       code: API_CODE_SUCCESS,
       message: "Access code is valid",
-      data: {
-        group_id: presentation.group_id
-      }
+      data: null
     });
   } catch (err) {
     return res.json({
