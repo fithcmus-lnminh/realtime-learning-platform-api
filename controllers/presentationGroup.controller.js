@@ -1,11 +1,7 @@
 const PresentationGroup = require("../models/presentationGroup.model.js");
 const GroupUser = require("../models/groupUser.model.js");
 const PresentationUser = require("../models/presentationUser.model.js");
-const {
-  API_CODE_SUCCESS,
-  API_CODE_BY_SERVER,
-  API_CODE_NOTFOUND
-} = require("../constants");
+const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 
 exports.createPresentationGroup = async (req, res) => {
   const { group_id } = req.body;
@@ -29,7 +25,7 @@ exports.createPresentationGroup = async (req, res) => {
 
     const GroupUsers = await GroupUser.find({
       group_id,
-      role: "Co-Owner"
+      role: { $in: ["Owner", "Co-Owner"] }
     });
 
     const groupUserIds = GroupUsers.map((groupUser) => groupUser.user_id);

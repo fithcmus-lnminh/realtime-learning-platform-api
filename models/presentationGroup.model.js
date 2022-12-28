@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const presentationUser = require("./presentationUser.model.js");
+const PresentationUser = require("./presentationUser.model");
 
 const presentationGroupSchema = mongoose.Schema(
   {
@@ -22,14 +22,18 @@ const presentationGroupSchema = mongoose.Schema(
 presentationGroupSchema.pre("remove", async function (next) {
   const presentationGroup = this;
 
-  const presentationUsers = await presentationUser.find({
-    presentation_id: presentationGroup.presentation_id
-  });
+  const groupUsers = await mongoose.connection
+    .collection("groupusers")
+    .find({
+      group_id: presentationGroup.group_id,
+      role: { $in: ["Owner", "Co-Owner"] }
+    })
+    .toArray();
 
-  await presentationUser.updateMany(
+  await PresentationUser.updateMany(
     {
-      _id: {
-        $in: presentationUsers.map((presentationUser) => presentationUser._id)
+      user_id: {
+        $in: groupUsers.map((groupUser) => groupUser.user_id)
       }
     },
     {
@@ -37,13 +41,15 @@ presentationGroupSchema.pre("remove", async function (next) {
     }
   );
 
-  await presentationUser.deleteMany({
-    _id: {
-      $in: presentationUsers.map((presentationUser) => presentationUser._id)
+  await PresentationUser.deleteMany({
+    user_id: {
+      $in: groupUsers.map((groupUser) => groupUser.user_id)
     },
     counter: 0,
     role: "Co-Owner"
   });
+
+  next();
 });
 
 module.exports = mongoose.model("PresentationGroup", presentationGroupSchema);

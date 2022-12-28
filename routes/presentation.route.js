@@ -8,7 +8,6 @@ const {
   CheckAccessCodeValid
 } = require("../controllers/presentation.controller");
 const {
-  checkGroupIdInBody,
   isPresentationExist,
   isPresentationUserExist,
   isPresentationOwner
@@ -26,7 +25,7 @@ router.post("/access-code", CheckAccessCodeValid);
 
 router.use(isAuth);
 
-router.post("/", checkGroupIdInBody, createPresentation);
+router.post("/", createPresentation);
 router.get("/", getPresentations);
 
 router.use("/:presentation_id", isPresentationExist, isPresentationUserExist);

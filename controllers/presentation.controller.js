@@ -242,15 +242,7 @@ exports.updatePresentation = async (req, res) => {
   const { presentation } = req;
 
   try {
-    if (presentation.group_id && group_id !== presentation.group_id) {
-      await PresentationUser.deleteMany({
-        presentation_id: presentation._id,
-        role: "Co-Owner"
-      });
-    }
-
     presentation.title = title;
-    presentation.group_id = group_id;
 
     await presentation.save();
 
