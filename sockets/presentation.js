@@ -150,19 +150,19 @@ exports.registerPresentationHandler = (io, socket) => {
 
       socket.to(access_code).emit("start-presentation");
 
-      if (presentation.group_id) {
-        io.of("/notification")
-          .to(presentation.group_id.toString())
-          .emit("new-notification", {
-            message: `Presentation "${presentation.title}" is started`,
-            data: {
-              type: "presentation",
-              presentation_id: presentation._id,
-              title: presentation.title,
-              access_code: presentation.access_code
-            }
-          });
+      io.of("/notification")
+        .to(presentation._id.toString())
+        .emit("new-notification", {
+          message: `Presentation "${presentation.title}" is started`,
+          data: {
+            type: "presentation",
+            presentation_id: presentation._id,
+            title: presentation.title,
+            access_code: presentation.access_code
+          }
+        });
 
+      if (presentation.group_id) {
         io.of("/group")
           .to(presentation.group_id.toString())
           .emit("start-presentation", {

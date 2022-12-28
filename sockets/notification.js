@@ -1,12 +1,17 @@
 const GroupUser = require("../models/groupUser.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 
 exports.registerNotificationHandler = async (io, socket) => {
   const user = socket.user;
   const groupUsers = await GroupUser.find({ user_id: user.id });
 
-  groupUsers.forEach((groupUser) => {
-    socket.join(groupUser.group_id.toString());
-  });
+  const presentationGroups = await PresentationGroup.find({
+    group_id: {
+      $in: groupUsers.map((groupUser) => groupUser.group_id)
+    }
+  }).distinct("presentation_id");
 
-  console.log(socket.rooms);
+  presentationGroups.forEach((presentationGroup) => {
+    socket.join(presentationGroup.toString());
+  });
 };
