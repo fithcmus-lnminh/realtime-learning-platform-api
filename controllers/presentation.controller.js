@@ -151,7 +151,8 @@ exports.getPresentations = async (req, res) => {
                 },
                 createdAt: 1,
                 updatedAt: 1,
-                slides: 1
+                slides: 1,
+                is_public: 1
               }
             },
             {
