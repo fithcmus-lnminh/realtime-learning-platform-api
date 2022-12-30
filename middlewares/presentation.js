@@ -2,6 +2,7 @@ const Group = require("../models/group.model");
 const GroupUser = require("../models/groupUser.model");
 const Presentation = require("../models/presentation.model");
 const PresentationUser = require("../models/presentationUser.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const {
   API_CODE_PERMISSION_DENIED,
   API_CODE_NOTFOUND,
@@ -75,46 +76,30 @@ exports.isPresentationOwner = async (req, res, next) => {
   }
 };
 
-exports.checkGroupIdInBody = async (req, res, next) => {
-  const { group_id } = req.body;
-  const { user } = req;
+exports.isPresentationGroupExist = async (req, res, next) => {
+  const { presentation_id, group_id } = req.params;
 
-  if (group_id) {
-    try {
-      if (await Group.exists({ _id: group_id })) {
-        const groupUser = await GroupUser.findOne({
-          group_id,
-          user_id: user._id
-        });
+  try {
+    const presentationGroup = await PresentationGroup.findOne({
+      presentation_id,
+      group_id
+    });
 
-        if (groupUser) {
-          if (groupUser.role !== "Owner") {
-            res.json({
-              code: API_CODE_PERMISSION_DENIED,
-              message: "Only group owner can create presentation",
-              data: null
-            });
-          } else next();
-        } else
-          res.json({
-            code: API_CODE_PERMISSION_DENIED,
-            message: "You have not joined this group",
-            data: null
-          });
-      } else
-        res.json({
-          code: API_CODE_NOTFOUND,
-          message: "Group does not exist",
-          data: null
-        });
-    } catch (err) {
+    if (!presentationGroup) {
       res.json({
-        code: API_CODE_BY_SERVER,
-        message: err.message,
+        code: API_CODE_NOTFOUND,
+        message: "Presentation does not belong to this group",
         data: null
       });
+    } else {
+      req.presentationGroup = presentationGroup;
+      next();
     }
-  } else {
-    next();
+  } catch {
+    res.json({
+      code: API_CODE_BY_SERVER,
+      message: err.message,
+      data: null
+    });
   }
 };

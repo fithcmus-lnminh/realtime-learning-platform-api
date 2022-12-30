@@ -3,11 +3,21 @@ class Presentations {
     this.presentations = [];
   }
 
-  addPresentation({ access_code, slides, current_slide }) {
+  addPresentation({
+    _id,
+    title,
+    access_code,
+    slides,
+    current_slide,
+    group_ids
+  }) {
     this.presentations.push({
+      _id,
+      title,
       access_code,
       slides,
       current_slide,
+      group_ids
     });
   }
 
@@ -22,6 +32,12 @@ class Presentations {
       (presentation) => presentation.access_code === access_code
     );
   }
+
+  getPresentationByGroup(group_id) {
+    return this.presentations.find(
+      (presentation) => presentation.group_id == group_id
+    );
+  }
 }
 
-module.exports = { Presentations };
+module.exports = new Presentations();

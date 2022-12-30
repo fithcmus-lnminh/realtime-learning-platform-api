@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const GroupUser = require("../models/groupUser.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 
 const groupSchema = mongoose.Schema(
   {
@@ -8,8 +9,7 @@ const groupSchema = mongoose.Schema(
       required: true
     },
     description: {
-      type: String,
-      required: true
+      type: String
     },
     maximum_members: {
       type: Number,
@@ -22,9 +22,24 @@ const groupSchema = mongoose.Schema(
   }
 );
 
-groupSchema.methods.isFullMember = async function (enteredPassword) {
-  const totalUsers = await GroupUser.countDocuments({ group_id: this._id });
-  return totalUsers >= this.maximum_members;
-};
+groupSchema.pre("remove", async function (next) {
+  const group = this;
+
+  const presentationGroups = await PresentationGroup.find({
+    group_id: group._id
+  });
+
+  await Promise.all(
+    presentationGroups.map(async (presentationGroup) => {
+      await presentationGroup.remove();
+    })
+  );
+
+  await GroupUser.deleteMany({
+    group_id: group._id
+  });
+
+  next();
+});
 
 module.exports = mongoose.model("Group", groupSchema);

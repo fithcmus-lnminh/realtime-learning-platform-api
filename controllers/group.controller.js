@@ -2,7 +2,7 @@ const Group = require("../models/group.model");
 const GroupUser = require("../models/groupUser.model");
 const User = require("../models/user.model");
 const PresentationUser = require("../models/presentationUser.model");
-const Presentation = require("../models/presentation.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const jwt = require("jsonwebtoken");
 const { API_CODE_SUCCESS, API_CODE_BY_SERVER } = require("../constants");
 const sendMail = require("../utils/mailer");
@@ -194,33 +194,10 @@ exports.updateGroup = async (req, res) => {
 };
 
 exports.deleteGroup = async (req, res) => {
-  const { group_id } = req.params;
+  const { group } = req;
 
   try {
-    await Group.deleteOne({ group_id });
-    await GroupUser.deleteMany({ group_id });
-
-    const presentations = await Presentation.find({ group_id });
-
-    const presentationIds = presentations.map((presentation) => {
-      return presentation._id;
-    });
-
-    await Presentation.updateMany(
-      {
-        _id: { $in: presentationIds }
-      },
-      {
-        $set: {
-          group_id: null
-        }
-      }
-    );
-
-    await PresentationUser.deleteMany({
-      presentation_id: { $in: presentationIds },
-      role: "Co-Owner"
-    });
+    await group.remove();
 
     res.json({
       code: API_CODE_SUCCESS,
@@ -297,27 +274,10 @@ exports.joinGroup = async (req, res) => {
 };
 
 exports.leaveGroup = async (req, res, next) => {
-  const { group_id } = req.params;
-  const { user } = req;
+  const { groupUser } = req;
 
   try {
-    const groupUser = await GroupUser.findOneAndDelete({
-      group_id,
-      user_id: user._id
-    });
-
-    if (groupUser.role === "Co-Owner") {
-      const presentations = await Presentation.find({ group_id });
-
-      const presentationIds = presentations.map((presentation) => {
-        return presentation._id;
-      });
-
-      await PresentationUser.deleteMany({
-        presentation_id: { $in: presentationIds },
-        role: "Co-Owner"
-      });
-    }
+    await groupUser.remove();
 
     res.json({
       code: 0,
@@ -337,10 +297,7 @@ exports.kickUser = async (req, res) => {
   const { member } = req;
 
   try {
-    await GroupUser.deleteOne({
-      group_id: member.group_id,
-      user_id: member.user_id
-    });
+    await member.remove();
 
     res.json({
       code: API_CODE_SUCCESS,
@@ -361,65 +318,52 @@ exports.promoteUser = async (req, res) => {
   const { role } = req.body;
 
   try {
-    if (role != member.role) {
-      if (role == "Co-Owner") {
-        const presentations = await Presentation.find({
-          group_id: member.group_id
-        });
+    if (role == member.role)
+      return res.json({
+        code: API_CODE_SUCCESS,
+        message: "Success",
+        data: null
+      });
 
-        const presentationIds = presentations.map((presentation) => {
-          return presentation._id;
-        });
+    const presentationGroups = await PresentationGroup.find({
+      group_id: member.group_id
+    }).distinct("presentation_id");
 
-        const presentationUsers = await PresentationUser.find({
-          presentation_id: { $in: presentationIds },
-          user_id: member.user_id,
-          role: "Collaborator"
-        });
-
-        const presentationCollaboratorIds = presentationUsers.map(
-          (presentationUser) => {
-            return presentationUser.presentation_id;
-          }
-        );
-
-        const presentationCoOwnerIds = presentationIds.filter(
-          (presentationId) => {
-            return !presentationCollaboratorIds.includes(
-              presentationCollaboratorIds.find((presentationCollaboratorId) => {
-                return (
-                  presentationCollaboratorId.toString() ==
-                  presentationId.toString()
-                );
-              })
-            );
-          }
-        );
-
-        await PresentationUser.insertMany(
-          presentationCoOwnerIds.map((presentation_id) => {
-            return {
-              presentation_id,
-              user_id: member.user_id,
-              role: "Co-Owner"
-            };
-          })
-        );
-      } else if (role == "Member") {
-        const presentations = await Presentation.find({
-          group_id: member.group_id
-        });
-
-        const presentationIds = presentations.map((presentation) => {
-          return presentation._id;
-        });
-
-        await PresentationUser.deleteMany({
-          presentation_id: { $in: presentationIds },
+    if (role == "Co-Owner") {
+      await PresentationUser.insertMany(
+        presentationGroups.map((presentation_id) => ({
+          presentation_id,
           user_id: member.user_id,
           role: "Co-Owner"
-        });
-      }
+        })),
+        { ordered: false }
+      ).catch((err) => {});
+
+      await PresentationUser.updateMany(
+        {
+          presentation_id: { $in: presentationGroups },
+          user_id: member.user_id
+        },
+        {
+          $inc: { counter: 1 }
+        }
+      );
+    } else if (role == "Member") {
+      await PresentationUser.updateMany(
+        {
+          presentation_id: { $in: presentationGroups },
+          user_id: member.user_id
+        },
+        {
+          $inc: { counter: -1 }
+        }
+      );
+
+      await PresentationUser.deleteMany({
+        presentation_id: { $in: presentationGroups },
+        user_id: member.user_id,
+        counter: 0
+      });
     }
 
     member.role = role;
@@ -428,9 +372,7 @@ exports.promoteUser = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: {
-        role
-      }
+      data: null
     });
   } catch (err) {
     res.json({

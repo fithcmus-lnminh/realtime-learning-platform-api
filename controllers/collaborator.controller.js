@@ -129,7 +129,21 @@ exports.updateCollaborator = async (req, res) => {
     });
   }
 
+  if (role == presentationMember.role)
+    return res.json({
+      code: API_CODE_SUCCESS,
+      message: "This role is already assigned",
+      data: null
+    });
+
   try {
+    if (role === "Co-Owner" && presentationMember.counter === 0)
+      return res.json({
+        code: API_CODE_PERMISSION_DENIED,
+        message: "You can't assign this role",
+        data: null
+      });
+
     presentationMember.role = role;
     await presentationMember.save();
 

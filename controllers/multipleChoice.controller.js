@@ -11,7 +11,7 @@ exports.createMultipleChoice = async (req, res) => {
 
     for (let i = 0; i < 3; i++) {
       const option = await Option.create({
-        content: "Option " + (i + 1),
+        content: "Option " + (i + 1)
       });
 
       options.push(option._id);
@@ -19,12 +19,12 @@ exports.createMultipleChoice = async (req, res) => {
 
     const multipleChoice = await MultipleChoice.create({
       question,
-      options,
+      options
     });
 
     presentation.slides.push({
       slide_type: "MultipleChoice",
-      slide_id: multipleChoice._id,
+      slide_id: multipleChoice._id
     });
 
     await presentation.save();
@@ -32,13 +32,13 @@ exports.createMultipleChoice = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: multipleChoice,
+      data: multipleChoice
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -51,20 +51,20 @@ exports.getMultipleChoices = async (req, res) => {
       _id: {
         $in: presentation.slides
           .filter((slide) => slide.slide_type === "MultipleChoice")
-          .map((slide) => slide.slide_id),
-      },
+          .map((slide) => slide.slide_id)
+      }
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: multipleChoices,
+      data: multipleChoices
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -75,15 +75,13 @@ exports.getMultipleChoice = async (req, res) => {
   res.json({
     code: API_CODE_SUCCESS,
     message: "Success",
-    data: multipleChoice,
+    data: multipleChoice
   });
 };
 
 exports.updateMultipleChoice = async (req, res) => {
   const { question } = req.body;
   const { multipleChoice } = req;
-
-  console.log(question)
 
   try {
     multipleChoice.question = question;
@@ -92,13 +90,13 @@ exports.updateMultipleChoice = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: multipleChoice,
+      data: multipleChoice
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -118,13 +116,13 @@ exports.deleteMultipleChoice = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };

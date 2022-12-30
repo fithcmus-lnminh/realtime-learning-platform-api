@@ -1,12 +1,16 @@
 const generate = require("generate-password");
 const Presentation = require("../models/presentation.model");
+const GroupUser = require("../models/groupUser.model");
+const User = require("../models/user.model");
+const PresentationGroup = require("../models/presentationGroup.model");
 const {
   API_CODE_SUCCESS,
   API_CODE_BY_SERVER,
-  API_CODE_NOTFOUND
+  API_CODE_NOTFOUND,
+  API_CODE_PERMISSION_DENIED
 } = require("../constants");
 const PresentationUser = require("../models/presentationUser.model");
-const GroupUser = require("../models/groupUser.model");
+const jwt = require("jsonwebtoken");
 
 exports.getPresentation = async (req, res) => {
   const { presentationUser } = req;
@@ -65,7 +69,7 @@ exports.getPresentation = async (req, res) => {
 
 exports.getPresentations = async (req, res) => {
   const { user } = req;
-  const { group_id, page = 1, limit = 10, role } = req.query;
+  const { page = 1, limit = 10, role } = req.query;
 
   try {
     const presentationUsers = await PresentationUser.find({
@@ -147,7 +151,8 @@ exports.getPresentations = async (req, res) => {
                 },
                 createdAt: 1,
                 updatedAt: 1,
-                slides: 1
+                slides: 1,
+                is_public: 1
               }
             },
             {
@@ -184,7 +189,7 @@ exports.getPresentations = async (req, res) => {
 };
 
 exports.createPresentation = async (req, res) => {
-  const { title, group_id } = req.body;
+  const { title, is_public } = req.body;
   const { user } = req;
 
   try {
@@ -214,7 +219,7 @@ exports.createPresentation = async (req, res) => {
       title,
       access_code,
       user_id: user._id,
-      group_id
+      is_public
     });
 
     await PresentationUser.create({
@@ -222,23 +227,6 @@ exports.createPresentation = async (req, res) => {
       presentation_id: presentation._id,
       role: "Owner"
     });
-
-    if (group_id) {
-      const GroupUsers = await GroupUser.find({
-        group_id,
-        role: "Co-Owner"
-      });
-
-      const groupUserIds = GroupUsers.map((groupUser) => groupUser.user_id);
-
-      await PresentationUser.insertMany(
-        groupUserIds.map((groupUserId) => ({
-          user_id: groupUserId,
-          presentation_id: presentation._id,
-          role: "Co-Owner"
-        }))
-      );
-    }
 
     res.json({
       code: API_CODE_SUCCESS,
@@ -257,36 +245,12 @@ exports.createPresentation = async (req, res) => {
 };
 
 exports.updatePresentation = async (req, res) => {
-  const { title, group_id } = req.body;
+  const { title, is_public } = req.body;
   const { presentation } = req;
 
   try {
-    if (presentation.group_id && group_id !== presentation.group_id) {
-      await PresentationUser.deleteMany({
-        presentation_id: presentation._id,
-        role: "Co-Owner"
-      });
-
-      if (group_id) {
-        const groupUsers = await GroupUser.find({
-          group_id,
-          role: "Co-Owner"
-        });
-
-        const groupUserIds = groupUsers.map((groupUser) => groupUser.user_id);
-
-        await PresentationUser.insertMany(
-          groupUserIds.map((groupUserId) => ({
-            user_id: groupUserId,
-            presentation_id: presentation._id,
-            role: "Co-Owner"
-          }))
-        );
-      }
-    }
-
     presentation.title = title;
-    presentation.group_id = group_id;
+    presentation.is_public = is_public;
 
     await presentation.save();
 
@@ -340,12 +304,54 @@ exports.CheckAccessCodeValid = async (req, res, next) => {
       });
     }
 
+    if (!presentation.is_public) {
+      let user_id = null;
+
+      if (req.user) {
+        user_id = req.user._id;
+      } else {
+        if (
+          req.headers.authorization &&
+          req.headers.authorization.startsWith("Bearer")
+        ) {
+          const token = req.headers.authorization.split(" ")[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          const user = await User.findById(decoded.id).select("-password");
+
+          if (user.token === token) user_id = user._id;
+        }
+      }
+
+      if (!user_id) {
+        return res.json({
+          code: API_CODE_PERMISSION_DENIED,
+          message: "This presentation is private, please login to access",
+          data: null
+        });
+      }
+
+      const groupUsers = await GroupUser.find({
+        user_id
+      });
+
+      if (
+        !(await PresentationGroup.exists({
+          presentation_id: presentation._id,
+          group_id: { $in: groupUsers.map((groupUser) => groupUser.group_id) }
+        }))
+      ) {
+        return res.json({
+          code: API_CODE_PERMISSION_DENIED,
+          message: "You don't have permission to access this presentation",
+          data: null
+        });
+      }
+    }
+
     return res.json({
       code: API_CODE_SUCCESS,
       message: "Access code is valid",
-      data: {
-        group_id: presentation.group_id
-      }
+      data: null
     });
   } catch (err) {
     return res.json({
