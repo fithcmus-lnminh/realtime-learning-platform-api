@@ -417,30 +417,34 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("teacher-end-presentation", async (data, callback) => {
-    const { access_code, is_teacher } = user;
+    try {
+      const { access_code, is_teacher } = user;
 
-    if (!is_teacher) {
-      return callback({
-        code: SOCKET_CODE_FAIL,
-        message: "User is not teacher"
+      if (!is_teacher) {
+        return callback({
+          code: SOCKET_CODE_FAIL,
+          message: "User is not teacher"
+        });
+      }
+
+      const presentation = presentations.getPresentation(access_code);
+      const { group_ids } = presentation;
+
+      group_ids.forEach((group_id) => {
+        io.of("/group").to(group_id).emit("end-presentation");
       });
+
+      presentations.removePresentation(access_code);
+
+      socket.to(access_code).emit("end-presentation");
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Presentation ended"
+      });
+    } catch (err) {
+      console.log(err);
     }
-
-    const presentation = presentations.getPresentation(access_code);
-    const { group_ids } = presentation;
-
-    group_ids.forEach((group_id) => {
-      io.of("/group").to(group_id).emit("end-presentation");
-    });
-
-    presentations.removePresentation(access_code);
-
-    socket.to(access_code).emit("end-presentation");
-
-    callback({
-      code: SOCKET_CODE_SUCCESS,
-      message: "Presentation ended"
-    });
   });
 
   socket.on("student-vote-option", async (data, callback) => {
@@ -592,26 +596,30 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("disconnecting", () => {
-    const { access_code } = user;
-    const viewer = viewers.getViewer(access_code, user.id);
+    try {
+      const { access_code } = user;
+      const viewer = viewers.getViewer(access_code, user.id);
 
-    if (viewer) {
-      viewers.removeViewer(access_code, user.id);
+      if (viewer) {
+        viewers.removeViewer(access_code, user.id);
 
-      socket.to(access_code).emit("get-total-students", {
-        total_users: viewers.getTotalUsers(access_code)
-      });
-    }
+        socket.to(access_code).emit("get-total-students", {
+          total_users: viewers.getTotalUsers(access_code)
+        });
+      }
 
-    if (user.is_teacher) {
-      const presentation = presentations.getPresentation(access_code);
-      const { group_ids } = presentation;
+      if (user.is_teacher) {
+        const presentation = presentations.getPresentation(access_code);
+        const { group_ids } = presentation;
 
-      group_ids.forEach((group_id) => {
-        io.of("/group").to(group_id).emit("end-presentation");
-      });
+        group_ids.forEach((group_id) => {
+          io.of("/group").to(group_id).emit("end-presentation");
+        });
 
-      presentations.removePresentation(access_code);
+        presentations.removePresentation(access_code);
+      }
+    } catch (err) {
+      console.log(err);
     }
   });
 };
