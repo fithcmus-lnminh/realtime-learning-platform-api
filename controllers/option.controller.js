@@ -14,13 +14,13 @@ exports.createOption = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: option,
+      data: option
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -31,20 +31,20 @@ exports.getOptions = async (req, res) => {
   try {
     const options = await Option.find({
       _id: {
-        $in: multipleChoice.options,
-      },
+        $in: multipleChoice.options
+      }
     });
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: options,
+      data: options
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -55,7 +55,7 @@ exports.getOption = async (req, res) => {
   res.json({
     code: API_CODE_SUCCESS,
     message: "Success",
-    data: option,
+    data: option
   });
 };
 
@@ -71,13 +71,13 @@ exports.updateOption = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: option,
+      data: option
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
@@ -96,13 +96,13 @@ exports.deleteOption = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: null,
+      data: null
     });
   } catch (err) {
     res.json({
       code: API_CODE_BY_SERVER,
       message: err.message,
-      data: null,
+      data: null
     });
   }
 };
