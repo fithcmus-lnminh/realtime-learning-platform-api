@@ -3,6 +3,7 @@ const Presentation = require("../models/presentation.model");
 const PresentationGroup = require("../models/presentationGroup.model");
 const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
+const Message = require("../models/message.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 
 const presentations = require("../utils/presentations");
@@ -593,6 +594,48 @@ exports.registerPresentationHandler = (io, socket) => {
         option_id: voter._id
       }
     });
+  });
+
+  socket.on("send-message", async (data, callback) => {
+    const { access_code } = user;
+
+    if (!access_code) {
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not in presentation"
+      });
+    }
+
+    const { content } = data;
+
+    try {
+      const presentation = await Presentation.findOne({ access_code });
+      const message = await Message.create({
+        content,
+        presentation_id: presentation._id,
+        sender_type: user.type,
+        sender_id: user.id
+      });
+
+      await Message.populate(message, {
+        path: "sender_id",
+        select: "name first_name last_name"
+      });
+
+      socket.to(access_code).emit("message-received", {
+        message
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Message sent"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
   });
 
   socket.on("disconnecting", () => {

@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { API_CODE_UNAUTHORIZED, API_CODE_FAIL } = require("../constants");
 const User = require("../models/user.model");
+const Anonymous = require("../models/anonymous.model");
 
 exports.isAuth = async (req, res, next) => {
   try {
@@ -15,9 +16,14 @@ exports.isAuth = async (req, res, next) => {
         token = req.headers.authorization.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await User.findById(decoded.id).select("-password");
+        let user;
 
-        if (user.token === token) {
+        if (decoded.type == "User")
+          user = await User.findById(decoded.id).select("-password");
+        else if (decoded.type == "Anonymous")
+          user = await Anonymous.findById(decoded.id);
+
+        if (decoded.type == "Anonymous" || user.token === token) {
           req.user = user;
           next();
         } else {
