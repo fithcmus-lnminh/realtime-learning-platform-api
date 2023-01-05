@@ -125,6 +125,8 @@ exports.registerPresentationHandler = (io, socket) => {
         group_ids
       });
 
+      user.is_host = true;
+
       socket.to(access_code).emit("get-slide", {
         slide: {
           ...presentation.slides[0],
@@ -227,9 +229,6 @@ exports.registerPresentationHandler = (io, socket) => {
           presentation_id: presentation._id
         });
 
-        console.log(presentation);
-        console.log(presentationGroups);
-
         if (
           !(await GroupUser.exists({
             user_id: user.id,
@@ -300,9 +299,9 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("teacher-next-slide", async (data, callback) => {
-    const { access_code, is_teacher } = user;
+    const { access_code, is_host } = user;
 
-    if (!is_teacher) {
+    if (!is_host) {
       return callback({
         code: SOCKET_CODE_FAIL,
         message: "User is not teacher"
@@ -356,12 +355,12 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("teacher-previous-slide", async (data, callback) => {
-    const { access_code, is_teacher } = user;
+    const { access_code, is_host } = user;
 
-    if (!is_teacher) {
+    if (!is_host) {
       return callback({
         code: SOCKET_CODE_FAIL,
-        message: "User is not teacher"
+        message: "User is not host"
       });
     }
 
@@ -419,32 +418,40 @@ exports.registerPresentationHandler = (io, socket) => {
 
   socket.on("teacher-end-presentation", async (data, callback) => {
     try {
-      const { access_code, is_teacher } = user;
+      const { access_code, is_host } = user;
 
-      if (!is_teacher) {
+      if (!is_host) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not teacher"
+          message: "User is not host"
         });
       }
 
       const presentation = presentations.getPresentation(access_code);
-      const { group_ids } = presentation;
 
-      group_ids.forEach((group_id) => {
-        io.of("/group").to(group_id).emit("end-presentation");
-      });
+      if (presentation) {
+        const { group_ids } = presentation;
 
-      presentations.removePresentation(access_code);
+        group_ids.forEach((group_id) => {
+          io.of("/group").to(group_id).emit("end-presentation");
+        });
+
+        presentations.removePresentation(access_code);
+      }
 
       socket.to(access_code).emit("end-presentation");
+
+      user.is_host = false;
 
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Presentation ended"
       });
     } catch (err) {
-      console.log(err);
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
     }
   });
 
@@ -651,15 +658,18 @@ exports.registerPresentationHandler = (io, socket) => {
         });
       }
 
-      if (user.is_teacher) {
+      if (user.is_host) {
         const presentation = presentations.getPresentation(access_code);
-        const { group_ids } = presentation;
 
-        group_ids.forEach((group_id) => {
-          io.of("/group").to(group_id).emit("end-presentation");
-        });
+        if (presentation) {
+          const { group_ids } = presentation;
 
-        presentations.removePresentation(access_code);
+          group_ids.forEach((group_id) => {
+            io.of("/group").to(group_id).emit("end-presentation");
+          });
+
+          presentations.removePresentation(access_code);
+        }
       }
     } catch (err) {
       console.log(err);
