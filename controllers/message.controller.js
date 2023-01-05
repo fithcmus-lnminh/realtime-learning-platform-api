@@ -12,11 +12,11 @@ exports.getMessages = async (req, res) => {
     const messages = await Message.find({
       presentation_id,
       createdAt: {
-        $gt: lastMessage ? lastMessage.createdAt : new Date()
+        $lt: lastMessage ? lastMessage.createdAt : new Date().toISOString()
       }
     })
       .sort({
-        createdAt: 1
+        createdAt: -1
       })
       .limit(limit);
 
