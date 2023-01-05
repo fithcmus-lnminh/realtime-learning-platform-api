@@ -3,6 +3,7 @@ const Presentation = require("../models/presentation.model");
 const PresentationGroup = require("../models/presentationGroup.model");
 const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
+const Message = require("../models/message.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 
 const presentations = require("../utils/presentations");
@@ -124,7 +125,10 @@ exports.registerPresentationHandler = (io, socket) => {
         group_ids
       });
 
+      user.is_host = true;
+
       socket.to(access_code).emit("get-slide", {
+        presentation_id: presentation.id,
         slide: {
           ...presentation.slides[0],
           content: {
@@ -140,6 +144,7 @@ exports.registerPresentationHandler = (io, socket) => {
       });
 
       socket.emit("get-slide", {
+        presentation_id: presentation.id,
         slide: {
           ...presentation.slides[0],
           content: {
@@ -226,9 +231,6 @@ exports.registerPresentationHandler = (io, socket) => {
           presentation_id: presentation._id
         });
 
-        console.log(presentation);
-        console.log(presentationGroups);
-
         if (
           !(await GroupUser.exists({
             user_id: user.id,
@@ -265,6 +267,7 @@ exports.registerPresentationHandler = (io, socket) => {
 
       if (currentPresentation) {
         socket.emit("get-slide", {
+          presentation_id: presentation.id,
           slide: {
             ...currentPresentation.slides[
               currentPresentation.current_slide - 1
@@ -299,9 +302,9 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("teacher-next-slide", async (data, callback) => {
-    const { access_code, is_teacher } = user;
+    const { access_code, is_host } = user;
 
-    if (!is_teacher) {
+    if (!is_host) {
       return callback({
         code: SOCKET_CODE_FAIL,
         message: "User is not teacher"
@@ -321,6 +324,7 @@ exports.registerPresentationHandler = (io, socket) => {
     presentation.current_slide = next_slide;
 
     socket.to(access_code).emit("get-slide", {
+      presentation_id: presentation.id,
       slide: {
         ...presentation.slides[next_slide - 1],
         content: {
@@ -335,6 +339,7 @@ exports.registerPresentationHandler = (io, socket) => {
     });
 
     socket.emit("get-slide", {
+      presentation_id: presentation.id,
       slide: {
         ...presentation.slides[next_slide - 1],
         content: {
@@ -355,12 +360,12 @@ exports.registerPresentationHandler = (io, socket) => {
   });
 
   socket.on("teacher-previous-slide", async (data, callback) => {
-    const { access_code, is_teacher } = user;
+    const { access_code, is_host } = user;
 
-    if (!is_teacher) {
+    if (!is_host) {
       return callback({
         code: SOCKET_CODE_FAIL,
-        message: "User is not teacher"
+        message: "User is not host"
       });
     }
 
@@ -377,6 +382,7 @@ exports.registerPresentationHandler = (io, socket) => {
     presentation.current_slide = previous_slide;
 
     socket.to(access_code).emit("get-slide", {
+      presentation_id: presentation.id,
       slide: {
         ...presentation.slides[previous_slide - 1],
         content: {
@@ -394,6 +400,7 @@ exports.registerPresentationHandler = (io, socket) => {
     });
 
     socket.emit("get-slide", {
+      presentation_id: presentation.id,
       slide: {
         ...presentation.slides[previous_slide - 1],
         content: {
@@ -418,32 +425,40 @@ exports.registerPresentationHandler = (io, socket) => {
 
   socket.on("teacher-end-presentation", async (data, callback) => {
     try {
-      const { access_code, is_teacher } = user;
+      const { access_code, is_host } = user;
 
-      if (!is_teacher) {
+      if (!is_host) {
         return callback({
           code: SOCKET_CODE_FAIL,
-          message: "User is not teacher"
+          message: "User is not host"
         });
       }
 
       const presentation = presentations.getPresentation(access_code);
-      const { group_ids } = presentation;
 
-      group_ids.forEach((group_id) => {
-        io.of("/group").to(group_id).emit("end-presentation");
-      });
+      if (presentation) {
+        const { group_ids } = presentation;
 
-      presentations.removePresentation(access_code);
+        group_ids.forEach((group_id) => {
+          io.of("/group").to(group_id).emit("end-presentation");
+        });
+
+        presentations.removePresentation(access_code);
+      }
 
       socket.to(access_code).emit("end-presentation");
+
+      user.is_host = false;
 
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Presentation ended"
       });
     } catch (err) {
-      console.log(err);
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
     }
   });
 
@@ -595,6 +610,48 @@ exports.registerPresentationHandler = (io, socket) => {
     });
   });
 
+  socket.on("send-message", async (data, callback) => {
+    const { access_code } = user;
+
+    if (!access_code) {
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not in presentation"
+      });
+    }
+
+    const { content } = data;
+
+    try {
+      const presentation = await Presentation.findOne({ access_code });
+      const message = await Message.create({
+        content,
+        presentation_id: presentation._id,
+        sender_type: user.type,
+        sender_id: user.id
+      });
+
+      await Message.populate(message, {
+        path: "sender_id",
+        select: "name first_name last_name"
+      });
+
+      socket.to(access_code).emit("message-received", {
+        message
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Message sent"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
+  });
+
   socket.on("disconnecting", () => {
     try {
       const { access_code } = user;
@@ -608,15 +665,18 @@ exports.registerPresentationHandler = (io, socket) => {
         });
       }
 
-      if (user.is_teacher) {
+      if (user.is_host) {
         const presentation = presentations.getPresentation(access_code);
-        const { group_ids } = presentation;
 
-        group_ids.forEach((group_id) => {
-          io.of("/group").to(group_id).emit("end-presentation");
-        });
+        if (presentation) {
+          const { group_ids } = presentation;
 
-        presentations.removePresentation(access_code);
+          group_ids.forEach((group_id) => {
+            io.of("/group").to(group_id).emit("end-presentation");
+          });
+
+          presentations.removePresentation(access_code);
+        }
       }
     } catch (err) {
       console.log(err);

@@ -12,6 +12,7 @@ const userRouter = require("./routes/user.route");
 const presentationRouter = require("./routes/presentation.route");
 const anonymousRouter = require("./routes/anonymous.route");
 const tokenRouter = require("./routes/token.route");
+const messageRouter = require("./routes/message.route");
 const passport = require("passport");
 const session = require("express-session");
 const cron = require("node-cron");
@@ -52,6 +53,7 @@ app.use("/auth/google", OAuth2Router);
 app.use("/api/user", userRouter);
 app.use("/api/presentation", presentationRouter);
 app.use("/api/anonymous", anonymousRouter);
+app.use("/api/message", messageRouter);
 app.use("/api", tokenRouter);
 
 app.use(errorHandler);
