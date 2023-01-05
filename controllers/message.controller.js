@@ -12,11 +12,7 @@ exports.getMessages = async (req, res) => {
     const messages = await Message.find({
       presentation_id,
       createdAt: {
-<<<<<<< HEAD
         $lt: lastMessage ? lastMessage.createdAt : new Date().toISOString()
-=======
-        $lt: lastMessage ? lastMessage.createdAt : new Date()
->>>>>>> 3985336 (refactor)
       }
     })
       .sort({
@@ -27,7 +23,7 @@ exports.getMessages = async (req, res) => {
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: messages
+      data: messages.reverse()
     });
   } catch (err) {
     res.json({
