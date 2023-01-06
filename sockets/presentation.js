@@ -128,7 +128,7 @@ exports.registerPresentationHandler = (io, socket) => {
       user.is_host = true;
 
       socket.to(access_code).emit("get-slide", {
-        presentation_id: presentation.id,
+        presentation_id: presentation._id,
         slide: {
           ...presentation.slides[0],
           content: {
@@ -144,7 +144,7 @@ exports.registerPresentationHandler = (io, socket) => {
       });
 
       socket.emit("get-slide", {
-        presentation_id: presentation.id,
+        presentation_id: presentation._id,
         slide: {
           ...presentation.slides[0],
           content: {
@@ -324,7 +324,7 @@ exports.registerPresentationHandler = (io, socket) => {
     presentation.current_slide = next_slide;
 
     socket.to(access_code).emit("get-slide", {
-      presentation_id: presentation.id,
+      presentation_id: presentation._id,
       slide: {
         ...presentation.slides[next_slide - 1],
         content: {
@@ -339,7 +339,7 @@ exports.registerPresentationHandler = (io, socket) => {
     });
 
     socket.emit("get-slide", {
-      presentation_id: presentation.id,
+      presentation_id: presentation._id,
       slide: {
         ...presentation.slides[next_slide - 1],
         content: {
@@ -382,7 +382,7 @@ exports.registerPresentationHandler = (io, socket) => {
     presentation.current_slide = previous_slide;
 
     socket.to(access_code).emit("get-slide", {
-      presentation_id: presentation.id,
+      presentation_id: presentation._id,
       slide: {
         ...presentation.slides[previous_slide - 1],
         content: {
@@ -400,7 +400,7 @@ exports.registerPresentationHandler = (io, socket) => {
     });
 
     socket.emit("get-slide", {
-      presentation_id: presentation.id,
+      presentation_id: presentation._id,
       slide: {
         ...presentation.slides[previous_slide - 1],
         content: {
