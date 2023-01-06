@@ -4,6 +4,7 @@ const PresentationGroup = require("../models/presentationGroup.model");
 const PresentationUser = require("../models/presentationUser.model");
 const Option = require("../models/option.model");
 const Message = require("../models/message.model");
+const Question = require("../models/question.model");
 const { SOCKET_CODE_SUCCESS, SOCKET_CODE_FAIL } = require("../constants");
 
 const presentations = require("../utils/presentations");
@@ -252,6 +253,15 @@ exports.registerPresentationHandler = (io, socket) => {
       });
 
       user.access_code = access_code;
+
+      if (
+        await PresentationUser.exists({
+          user_id: user.id,
+          presentation_id: presentation._id
+        })
+      ) {
+        user.is_teacher = true;
+      }
 
       socket.join(access_code);
 
@@ -631,11 +641,6 @@ exports.registerPresentationHandler = (io, socket) => {
         sender_id: user.id
       });
 
-      await Message.populate(message, {
-        path: "sender_id",
-        select: "name first_name last_name"
-      });
-
       socket.to(access_code).emit("message-received", {
         message
       });
@@ -643,6 +648,178 @@ exports.registerPresentationHandler = (io, socket) => {
       callback({
         code: SOCKET_CODE_SUCCESS,
         message: "Message sent"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
+  });
+
+  socket.on("send-question", async (data, callback) => {
+    const { access_code } = user;
+
+    if (!access_code) {
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not in presentation"
+      });
+    }
+
+    const { question } = data;
+
+    try {
+      const presentation = await Presentation.findOne({ access_code });
+      const questionI = await Question.create({
+        question,
+        presentation_id: presentation._id,
+        upvotes: [],
+        questioner_type: user.type,
+        questioner_id: user.id
+      });
+
+      socket.to(access_code).emit("question-received", {
+        question: {
+          ...questionI._doc,
+          total_votes: questionI.upvotes.length
+        }
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Question sent"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
+  });
+
+  socket.on("send-answer", async (data, callback) => {
+    const { is_teacher, access_code } = user;
+
+    if (!is_teacher)
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not teacher"
+      });
+
+    const { question_id, answer } = data;
+
+    try {
+      const questionI = await Question.findOneAndUpdate(
+        {
+          _id: question_id
+        },
+        {
+          answer,
+          answerer_id: user.id
+        }
+      );
+
+      socket.to(access_code).emit("question-updated", {
+        question: {
+          ...questionI._doc,
+          total_votes: questionI.upvotes.length
+        }
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Answer sent"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
+  });
+
+  socket.on("mark-answer", async (data, callback) => {
+    const { is_teacher, access_code } = user;
+
+    if (!is_teacher)
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not teacher"
+      });
+
+    try {
+      const questionI = await Question.findOne({
+        _id: data.question_id
+      });
+
+      questionI.is_answered = !questionI.is_answered;
+
+      await questionI.save();
+
+      socket.to(access_code).emit("question-updated", {
+        question: {
+          ...questionI._doc,
+          total_votes: questionI.upvotes.length
+        }
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Answer marked"
+      });
+    } catch (err) {
+      callback({
+        code: SOCKET_CODE_FAIL,
+        message: err.message
+      });
+    }
+  });
+
+  socket.on("vote-question", async (data, callback) => {
+    const { access_code } = user;
+
+    if (!access_code) {
+      return callback({
+        code: SOCKET_CODE_FAIL,
+        message: "User is not in presentation"
+      });
+    }
+
+    const { question_id } = data;
+
+    try {
+      const questionI = await Question.findOne({
+        _id: question_id
+      });
+
+      const voter = questionI.upvotes.find(
+        (upvote) => upvote.user_id == user.id && upvote.user_type == user.type
+      );
+
+      if (voter) {
+        questionI.upvotes = questionI.upvotes.filter(
+          (upvote) => upvote.user_id != user.id && upvote.user_type != user.type
+        );
+      } else {
+        questionI.upvotes.push({
+          user_id: user.id,
+          user_type: user.type
+        });
+      }
+
+      await questionI.save();
+
+      socket.to(access_code).emit("question-updated", {
+        question: {
+          ...questionI._doc,
+          total_votes: questionI.upvotes.length
+        }
+      });
+
+      callback({
+        code: SOCKET_CODE_SUCCESS,
+        message: "Question upvoted"
       });
     } catch (err) {
       callback({

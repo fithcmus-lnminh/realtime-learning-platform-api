@@ -94,13 +94,13 @@ exports.getGroups = async (req, res) => {
           group_id: 1,
           total_users: { $size: "$group_users" }
         }
-      },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit * 1
       }
+      // {
+      //   $skip: (page - 1) * limit
+      // },
+      // {
+      //   $limit: limit * 1
+      // }
     ]);
 
     await GroupUser.populate(groups, {
@@ -108,20 +108,20 @@ exports.getGroups = async (req, res) => {
       select: { _id: 1, name: 1, maximum_members: 1, description: 1 }
     });
 
-    const totalGroups = await GroupUser.countDocuments({
-      user_id: req.user._id,
-      role: role ? { $in: Array.isArray(role) ? role : [role] } : { $ne: null }
-    });
+    // const totalGroups = await GroupUser.countDocuments({
+    //   user_id: req.user._id,
+    //   role: role ? { $in: Array.isArray(role) ? role : [role] } : { $ne: null }
+    // });
 
-    const totalPages = Math.ceil(totalGroups / limit);
+    // const totalPages = Math.ceil(totalGroups / limit);
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        groups,
-        total_groups: totalGroups,
-        total_pages: totalPages
+        groups
+        // total_groups: totalGroups,
+        // total_pages: totalPages
       }
     });
   } catch (err) {
