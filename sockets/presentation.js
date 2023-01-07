@@ -77,8 +77,7 @@ exports.registerPresentationHandler = (io, socket) => {
       }
 
       const presentation = await Presentation.findOne({
-        access_code,
-        user_id: user.id
+        access_code
       })
         .populate("slides.slide_id")
         .lean({ autopopulate: true });
@@ -170,7 +169,8 @@ exports.registerPresentationHandler = (io, socket) => {
             type: "presentation",
             presentation_id: presentation._id,
             title: presentation.title,
-            access_code: presentation.access_code
+            access_code: presentation,
+            host_id: user.id
           }
         });
 
@@ -221,7 +221,14 @@ exports.registerPresentationHandler = (io, socket) => {
         });
       }
 
-      if (!presentation.is_public) {
+      if (
+        await PresentationUser.exists({
+          presentation_id: presentation._id,
+          user_id: user.id
+        })
+      ) {
+        user.is_teacher = true;
+      } else if (!presentation.is_public) {
         if (user.type == "Anonymous")
           return callback({
             code: SOCKET_CODE_FAIL,
@@ -301,7 +308,10 @@ exports.registerPresentationHandler = (io, socket) => {
 
       callback({
         code: SOCKET_CODE_SUCCESS,
-        message: "Student joined presentation"
+        message: "Student joined presentation",
+        data: {
+          is_teacher: user.is_teacher
+        }
       });
     } catch (err) {
       callback({
