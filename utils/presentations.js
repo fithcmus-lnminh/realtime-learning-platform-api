@@ -35,7 +35,7 @@ class Presentations {
 
   getPresentationByGroup(group_id) {
     return this.presentations.find(
-      (presentation) => presentation.group_id == group_id
+      (presentation) => presentation.group_ids.indexOf(group_id) !== -1
     );
   }
 }
