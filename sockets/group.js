@@ -25,9 +25,6 @@ exports.registerGroupHandler = async (io, socket) => {
 
       const presentation = presentations.getPresentationByGroup(group_id);
 
-      console.log(presentations);
-      console.log(group_id);
-
       if (presentation) {
         socket.emit("start-presentation", {
           message: `Presentation "${presentation.title}" is started`,
