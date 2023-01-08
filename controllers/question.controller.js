@@ -45,8 +45,6 @@ exports.getQuestions = async (req, res) => {
       presentation_id: mongoose.Types.ObjectId(presentation_id)
     };
 
-    console.log("user", user._id);
-
     let questions = await Question.aggregate([
       {
         $match: queryOptions

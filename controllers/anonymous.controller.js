@@ -16,13 +16,13 @@ exports.createAnonymous = async (req, res) => {
     res.status(201).json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: { token },
+      data: { token, anonymous_id: anonymous._id }
     });
   } catch (err) {
     res.status(500).json({
       code: API_CODE_BY_SERVER,
       success: false,
-      message: err.message,
+      message: err.message
     });
   }
 };
