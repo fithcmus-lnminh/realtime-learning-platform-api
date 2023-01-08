@@ -20,17 +20,21 @@ const questionSchema = mongoose.Schema(
         select: "name first_name last_name"
       }
     },
-    answerer_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      autopopulate: {
-        select: "first_name last_name"
+    answers: [
+      {
+        answerer_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          autopopulate: {
+            select: "first_name last_name"
+          }
+        },
+        answer: {
+          type: String
+        }
       }
-    },
+    ],
     question: {
-      type: String
-    },
-    answer: {
       type: String
     },
     upvotes: [

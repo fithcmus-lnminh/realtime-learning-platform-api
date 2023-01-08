@@ -725,8 +725,15 @@ exports.registerPresentationHandler = (io, socket) => {
           _id: question_id
         },
         {
-          answer,
-          answerer_id: user.id
+          $push: {
+            answers: {
+              answer,
+              answerer_id: user.id
+            }
+          }
+        },
+        {
+          new: true
         }
       );
 
@@ -809,7 +816,7 @@ exports.registerPresentationHandler = (io, socket) => {
 
       if (voter) {
         questionI.upvotes = questionI.upvotes.filter(
-          (upvote) => upvote.user_id != user.id && upvote.user_type != user.type
+          (upvote) => upvote.user_id != user.id || upvote.user_type != user.type
         );
       } else {
         questionI.upvotes.push({
