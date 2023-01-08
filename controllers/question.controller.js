@@ -45,6 +45,8 @@ exports.getQuestions = async (req, res) => {
       presentation_id: mongoose.Types.ObjectId(presentation_id)
     };
 
+    console.log("user", user._id);
+
     let questions = await Question.aggregate([
       {
         $match: queryOptions
@@ -55,11 +57,22 @@ exports.getQuestions = async (req, res) => {
             $size: "$upvotes"
           },
           is_voted: {
-            $in: ["$upvotes.user_id", [user._id]]
+            $in: [mongoose.Types.ObjectId(user._id), "$upvotes.user_id"]
           }
         }
       }
     ]).sort(sortOptions[sort]);
+
+    await Question.populate(questions, [
+      {
+        path: "questioner_id",
+        select: "name first_name last_name"
+      },
+      {
+        path: "answers.answerer_id",
+        select: "first_name last_name"
+      }
+    ]);
 
     const index = lastQuestion
       ? questions.findIndex(
@@ -67,13 +80,12 @@ exports.getQuestions = async (req, res) => {
         )
       : -1;
 
-    questions = questions.slice(index + 1, index + limit + 1);
+    questions = questions.slice(index + 1, index + parseInt(limit) + 1);
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
-      data: questions.reverse(),
-      size: questions.length
+      data: questions.reverse()
     });
   } catch (err) {
     res.json({
