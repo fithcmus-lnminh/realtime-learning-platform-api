@@ -28,8 +28,8 @@ exports.getGroupUsers = async (req, res) => {
         path: "user_id",
         select: "first_name last_name email"
       })
-      .skip((page - 1) * limit)
-      .limit(limit * 1)
+      // .skip((page - 1) * limit)
+      // .limit(limit * 1)
       .sort({ role: 1 });
 
     groupUsers.sort(function (a, b) {
@@ -44,7 +44,7 @@ exports.getGroupUsers = async (req, res) => {
       group_id,
       role: role ? { $in: Array.isArray(role) ? role : [role] } : { $ne: null }
     });
-    const totalPages = Math.ceil(totalUsers / limit);
+    // const totalPages = Math.ceil(totalUsers / limit);
 
     res.json({
       code: API_CODE_SUCCESS,
@@ -57,8 +57,8 @@ exports.getGroupUsers = async (req, res) => {
           email: owner.user_id.email
         },
         group_users: groupUsers,
-        total_users: totalUsers,
-        total_pages: totalPages
+        total_users: totalUsers
+        // total_pages: totalPages
       }
     });
   } catch (err) {

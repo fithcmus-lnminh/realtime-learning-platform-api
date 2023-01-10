@@ -154,29 +154,29 @@ exports.getPresentations = async (req, res) => {
                 slides: 1,
                 is_public: 1
               }
-            },
-            {
-              $skip: (page - 1) * limit
-            },
-            {
-              $limit: limit
             }
+            // {
+            //   $skip: (page - 1) * limit
+            // },
+            // {
+            //   $limit: limit
+            // }
           ],
           totalPresentations: [{ $count: "totalPresentations" }]
         }
       }
     ]);
 
-    const { totalPresentations = 0 } =
-      presentations[0].totalPresentations[0] ?? {};
-    const totalPages = Math.ceil(totalPresentations / limit);
+    // const { totalPresentations = 0 } =
+    //   presentations[0].totalPresentations[0] ?? {};
+    // const totalPages = Math.ceil(totalPresentations / limit);
 
     res.json({
       code: API_CODE_SUCCESS,
       message: "Success",
       data: {
-        presentations: presentations[0].data,
-        total_pages: totalPages
+        presentations: presentations[0].data
+        // total_pages: totalPages
       }
     });
   } catch (err) {
